@@ -9,6 +9,7 @@
     <!-- MJPEG stream or snapshot polling -->
     <img
       v-else-if="imgUrl"
+      ref="imgEl"
       :src="imgUrl"
       class="block w-full h-full object-contain"
       @load="onImgLoad"
@@ -42,8 +43,10 @@ const props = withDefaults(defineProps<{
 const auth = useAuthStore()
 const monitorStore = useMonitorStore()
 const streamEl = ref<HTMLElement>()
+const imgEl = ref<HTMLImageElement>()
 const isConnected = ref(false)
 const useWebRtc = ref(false)
+const alive = ref(true)
 const statusText = ref('Connecting...')
 const snapshotTick = ref(0)
 let snapshotTimer: ReturnType<typeof setInterval> | null = null
@@ -68,7 +71,6 @@ async function checkGo2rtc(): Promise<boolean> {
 function streamBaseUrl(): string {
   const port = monitorStore.streamingPort(props.monitorId)
   if (port > 0) {
-    // Per-monitor port: use the same protocol/hostname but a different port
     return `${window.location.protocol}//${window.location.hostname}:${port}/zm/cgi-bin/nph-zms`
   }
   return `/zm/cgi-bin/nph-zms`
@@ -80,13 +82,13 @@ const canStreamMjpeg = computed(() => {
 })
 
 const imgUrl = computed(() => {
+  if (!alive.value) return ''
   if (!props.monitorId || !auth.accessToken || useWebRtc.value) return ''
   const w = props.width ?? '640'
   const h = props.height ?? '480'
   const base = streamBaseUrl()
 
   if (canStreamMjpeg.value) {
-    // Persistent MJPEG: either we're in watch view or per-monitor ports avoid the connection limit
     return `${base}?mode=jpeg&monitor=${props.monitorId}&scale=100&maxfps=5&buffer=1000&w=${w}&h=${h}&token=${auth.accessToken}`
   }
 
@@ -97,6 +99,19 @@ const imgUrl = computed(() => {
 
 function onImgLoad() {
   isConnected.value = true
+}
+
+function stopAllStreams() {
+  alive.value = false
+  stopSnapshotPolling()
+
+  // Force-disconnect MJPEG by blanking the img src
+  if (imgEl.value) {
+    imgEl.value.src = ''
+  }
+
+  if (useWebRtc.value) disconnectWebRtc()
+  isConnected.value = false
 }
 
 // Snapshot polling (only when not using per-monitor ports or go2rtc)
@@ -179,9 +194,5 @@ watch(() => [props.monitorId, props.monitorName], () => {
 })
 
 onMounted(init)
-
-onUnmounted(() => {
-  if (useWebRtc.value) disconnectWebRtc()
-  stopSnapshotPolling()
-})
+onUnmounted(stopAllStreams)
 </script>
