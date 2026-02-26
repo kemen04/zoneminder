@@ -7,6 +7,7 @@ import type { MonitorStatus, MonitorWithStatus, Group } from '@/types/monitor'
 export const useMonitorStore = defineStore('monitors', () => {
   const monitors = ref<MonitorWithStatus[]>([])
   const groups = ref<Group[]>([])
+  const minStreamingPort = ref(0)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -20,6 +21,12 @@ export const useMonitorStore = defineStore('monitors', () => {
     monitors.value.forEach((m) => map.set(m.Monitor.Id, m))
     return map
   })
+
+  /** Returns the per-monitor streaming port, or 0 if not configured */
+  function streamingPort(monitorId: string): number {
+    if (!minStreamingPort.value) return 0
+    return minStreamingPort.value + parseInt(monitorId)
+  }
 
   async function fetchMonitors() {
     const auth = useAuthStore()
@@ -53,6 +60,21 @@ export const useMonitorStore = defineStore('monitors', () => {
     }
   }
 
+  async function fetchStreamingConfig() {
+    const auth = useAuthStore()
+    try {
+      const token = await auth.ensureValidToken()
+      const data = await apiFetch<{ config: { Name: string; Value: string } }>(
+        '/configs/view/ZM_MIN_STREAMING_PORT.json',
+        token,
+      )
+      const val = parseInt(data.config?.Value)
+      minStreamingPort.value = isNaN(val) ? 0 : val
+    } catch {
+      minStreamingPort.value = 0
+    }
+  }
+
   async function fetchMonitorStatus(monitorId: string): Promise<MonitorStatus | null> {
     const auth = useAuthStore()
     try {
@@ -70,6 +92,7 @@ export const useMonitorStore = defineStore('monitors', () => {
   function startPolling(intervalMs = 10_000) {
     stopPolling()
     fetchMonitors()
+    fetchStreamingConfig()
     pollTimer = setInterval(fetchMonitors, intervalMs)
   }
 
@@ -85,10 +108,13 @@ export const useMonitorStore = defineStore('monitors', () => {
     groups,
     monitorList,
     monitorById,
+    minStreamingPort,
+    streamingPort,
     isLoading,
     error,
     fetchMonitors,
     fetchGroups,
+    fetchStreamingConfig,
     fetchMonitorStatus,
     startPolling,
     stopPolling,

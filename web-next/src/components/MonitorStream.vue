@@ -26,6 +26,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useMonitorStore } from '@/stores/monitors'
 
 const props = withDefaults(defineProps<{
   monitorId: string
@@ -39,6 +40,7 @@ const props = withDefaults(defineProps<{
 })
 
 const auth = useAuthStore()
+const monitorStore = useMonitorStore()
 const streamEl = ref<HTMLElement>()
 const isConnected = ref(false)
 const useWebRtc = ref(false)
@@ -62,28 +64,44 @@ async function checkGo2rtc(): Promise<boolean> {
   return go2rtcAvailable
 }
 
-// Image URL: either MJPEG stream or snapshot with cache-busting
+// Build the base URL for nph-zms, using per-monitor port if configured
+function streamBaseUrl(): string {
+  const port = monitorStore.streamingPort(props.monitorId)
+  if (port > 0) {
+    // Per-monitor port: use the same protocol/hostname but a different port
+    return `${window.location.protocol}//${window.location.hostname}:${port}/zm/cgi-bin/nph-zms`
+  }
+  return `/zm/cgi-bin/nph-zms`
+}
+
+// Can we use persistent MJPEG? Yes if per-monitor ports are configured or mode is "stream"
+const canStreamMjpeg = computed(() => {
+  return props.mode === 'stream' || monitorStore.minStreamingPort > 0
+})
+
 const imgUrl = computed(() => {
   if (!props.monitorId || !auth.accessToken || useWebRtc.value) return ''
   const w = props.width ?? '640'
   const h = props.height ?? '480'
+  const base = streamBaseUrl()
 
-  if (props.mode === 'stream') {
-    return `/zm/cgi-bin/nph-zms?mode=jpeg&monitor=${props.monitorId}&scale=100&maxfps=5&buffer=1000&w=${w}&h=${h}&token=${auth.accessToken}`
+  if (canStreamMjpeg.value) {
+    // Persistent MJPEG: either we're in watch view or per-monitor ports avoid the connection limit
+    return `${base}?mode=jpeg&monitor=${props.monitorId}&scale=100&maxfps=5&buffer=1000&w=${w}&h=${h}&token=${auth.accessToken}`
   }
 
   // Snapshot mode: single JPEG, cache-busted by snapshotTick
-  void snapshotTick.value // reactive dependency
-  return `/zm/cgi-bin/nph-zms?mode=single&monitor=${props.monitorId}&scale=100&w=${w}&h=${h}&token=${auth.accessToken}&_t=${snapshotTick.value}`
+  void snapshotTick.value
+  return `${base}?mode=single&monitor=${props.monitorId}&scale=100&w=${w}&h=${h}&token=${auth.accessToken}&_t=${snapshotTick.value}`
 })
 
 function onImgLoad() {
   isConnected.value = true
 }
 
-// Snapshot polling
+// Snapshot polling (only when not using per-monitor ports or go2rtc)
 function startSnapshotPolling() {
-  if (props.mode !== 'snapshot' || useWebRtc.value) return
+  if (canStreamMjpeg.value || useWebRtc.value) return
   stopSnapshotPolling()
   snapshotTimer = setInterval(() => {
     snapshotTick.value++
@@ -116,7 +134,7 @@ function connectWebRtc() {
     isConnected.value = true
   })
 
-  // Fallback: if no video within 5s, switch to snapshot/MJPEG
+  // Fallback: if no video within 5s, switch to MJPEG/snapshot
   fallbackTimer = window.setTimeout(() => {
     const video = el.querySelector('video')
     if (!video || video.readyState < 2) {
