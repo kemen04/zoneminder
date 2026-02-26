@@ -6,12 +6,12 @@
       ref="streamEl"
       class="block w-full h-full"
     />
-    <!-- MJPEG fallback -->
+    <!-- MJPEG stream or snapshot polling -->
     <img
-      v-else-if="mjpegUrl"
-      :src="mjpegUrl"
+      v-else-if="imgUrl"
+      :src="imgUrl"
       class="block w-full h-full object-contain"
-      @load="isConnected = true"
+      @load="onImgLoad"
       @error="isConnected = false"
     />
     <div
@@ -27,20 +27,26 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   monitorId: string
   monitorName: string
   width?: string
   height?: string
-}>()
+  /** "snapshot" polls single JPEGs (grid-friendly), "stream" uses persistent MJPEG */
+  mode?: 'snapshot' | 'stream'
+}>(), {
+  mode: 'snapshot',
+})
 
 const auth = useAuthStore()
 const streamEl = ref<HTMLElement>()
 const isConnected = ref(false)
 const useWebRtc = ref(false)
 const statusText = ref('Connecting...')
+const snapshotTick = ref(0)
+let snapshotTimer: ReturnType<typeof setInterval> | null = null
 
-// Check if go2rtc is available (once, cached)
+// Check if go2rtc is available (once, cached globally)
 let go2rtcChecked = false
 let go2rtcAvailable = false
 
@@ -56,13 +62,40 @@ async function checkGo2rtc(): Promise<boolean> {
   return go2rtcAvailable
 }
 
-// MJPEG stream URL
-const mjpegUrl = computed(() => {
+// Image URL: either MJPEG stream or snapshot with cache-busting
+const imgUrl = computed(() => {
   if (!props.monitorId || !auth.accessToken || useWebRtc.value) return ''
   const w = props.width ?? '640'
   const h = props.height ?? '480'
-  return `/zm/cgi-bin/nph-zms?mode=jpeg&monitor=${props.monitorId}&scale=100&maxfps=5&buffer=1000&w=${w}&h=${h}&token=${auth.accessToken}`
+
+  if (props.mode === 'stream') {
+    return `/zm/cgi-bin/nph-zms?mode=jpeg&monitor=${props.monitorId}&scale=100&maxfps=5&buffer=1000&w=${w}&h=${h}&token=${auth.accessToken}`
+  }
+
+  // Snapshot mode: single JPEG, cache-busted by snapshotTick
+  void snapshotTick.value // reactive dependency
+  return `/zm/cgi-bin/nph-zms?mode=single&monitor=${props.monitorId}&scale=100&w=${w}&h=${h}&token=${auth.accessToken}&_t=${snapshotTick.value}`
 })
+
+function onImgLoad() {
+  isConnected.value = true
+}
+
+// Snapshot polling
+function startSnapshotPolling() {
+  if (props.mode !== 'snapshot' || useWebRtc.value) return
+  stopSnapshotPolling()
+  snapshotTimer = setInterval(() => {
+    snapshotTick.value++
+  }, 2000)
+}
+
+function stopSnapshotPolling() {
+  if (snapshotTimer) {
+    clearInterval(snapshotTimer)
+    snapshotTimer = null
+  }
+}
 
 // WebRTC stream setup
 function connectWebRtc() {
@@ -83,13 +116,14 @@ function connectWebRtc() {
     isConnected.value = true
   })
 
-  // Fallback: if no video within 5s, switch to MJPEG
+  // Fallback: if no video within 5s, switch to snapshot/MJPEG
   fallbackTimer = window.setTimeout(() => {
     const video = el.querySelector('video')
     if (!video || video.readyState < 2) {
       disconnectWebRtc()
       useWebRtc.value = false
       statusText.value = 'Connecting...'
+      startSnapshotPolling()
     }
   }, 5000)
 }
@@ -110,11 +144,11 @@ async function init() {
   const hasGo2rtc = await checkGo2rtc()
   if (hasGo2rtc) {
     useWebRtc.value = true
-    // Wait for the video-stream element to render
     await new Promise((r) => setTimeout(r, 50))
     connectWebRtc()
   } else {
     useWebRtc.value = false
+    startSnapshotPolling()
   }
 }
 
@@ -123,12 +157,13 @@ watch(() => [props.monitorId, props.monitorName], () => {
     disconnectWebRtc()
     connectWebRtc()
   }
-  // MJPEG re-renders automatically via computed
+  snapshotTick.value++
 })
 
 onMounted(init)
 
 onUnmounted(() => {
   if (useWebRtc.value) disconnectWebRtc()
+  stopSnapshotPolling()
 })
 </script>

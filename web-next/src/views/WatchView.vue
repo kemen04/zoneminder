@@ -37,6 +37,7 @@
           :monitor-name="currentMonitor.Name"
           :width="currentMonitor.Width"
           :height="currentMonitor.Height"
+          mode="stream"
           class="w-full h-full"
         />
         <div v-else class="flex items-center justify-center h-full text-gray-500">
