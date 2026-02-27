@@ -1,6 +1,7 @@
 <template>
   <div class="space-y-2">
-    <div v-if="loading" class="text-center py-8">
+    <div v-if="loading" class="flex items-center justify-center gap-3 py-8">
+      <span class="spinner" />
       <span class="text-gray-400 text-sm">Loading events...</span>
     </div>
     <div v-else-if="events.length === 0" class="text-center py-8">
@@ -8,7 +9,7 @@
     </div>
     <table v-else class="w-full text-sm">
       <thead>
-        <tr class="text-left text-gray-400 border-b border-gray-800">
+        <tr class="text-left text-xs uppercase tracking-wider text-gray-400 border-b border-white/5">
           <th class="pb-2 font-medium">Monitor</th>
           <th class="pb-2 font-medium">Cause</th>
           <th class="pb-2 font-medium">Start</th>
@@ -20,7 +21,7 @@
         <tr
           v-for="event in events"
           :key="event.Id"
-          class="border-b border-gray-800/50 hover:bg-gray-800/50 cursor-pointer transition-colors"
+          class="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
           @click="$emit('select', event)"
         >
           <td class="py-2 text-gray-300">{{ monitorName(event.MonitorId) }}</td>
@@ -37,8 +38,8 @@
     <div v-if="pageCount > 1" class="flex items-center justify-between pt-2">
       <button
         :disabled="page <= 1"
-        class="px-3 py-1 rounded text-sm bg-gray-800 text-gray-300 hover:bg-gray-700
-               disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        class="btn-glass rounded-lg px-3 py-1 text-sm
+               disabled:opacity-40 disabled:cursor-not-allowed"
         @click="$emit('page', page - 1)"
       >
         Previous
@@ -46,8 +47,8 @@
       <span class="text-sm text-gray-500">Page {{ page }} of {{ pageCount }}</span>
       <button
         :disabled="page >= pageCount"
-        class="px-3 py-1 rounded text-sm bg-gray-800 text-gray-300 hover:bg-gray-700
-               disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        class="btn-glass rounded-lg px-3 py-1 text-sm
+               disabled:opacity-40 disabled:cursor-not-allowed"
         @click="$emit('page', page + 1)"
       >
         Next

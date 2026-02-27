@@ -17,8 +17,9 @@
     />
     <div
       v-if="!isConnected"
-      class="absolute inset-0 flex items-center justify-center bg-gray-900/80"
+      class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-100/80 backdrop-blur-sm"
     >
+      <span class="spinner" />
       <span class="text-sm text-gray-400">{{ statusText }}</span>
     </div>
   </div>

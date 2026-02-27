@@ -110,10 +110,21 @@ async function sendCommand(command: string) {
 </script>
 
 <style scoped>
-@reference "tailwindcss";
+@reference "../style.css";
 
 .ptz-btn {
-  @apply flex items-center justify-center w-10 h-10 rounded-lg bg-gray-800 text-gray-300
-         hover:bg-gray-700 hover:text-white active:bg-gray-600 transition-colors;
+  @apply flex items-center justify-center w-10 h-10 rounded-xl text-gray-300
+         transition-all duration-150;
+  background: rgb(255 255 255 / 0.06);
+  border: 1px solid rgb(255 255 255 / 0.08);
+}
+.ptz-btn:hover {
+  background: rgb(255 255 255 / 0.1);
+  border-color: rgb(255 255 255 / 0.15);
+  color: white;
+  transform: scale(1.05);
+}
+.ptz-btn:active {
+  transform: scale(0.97);
 }
 </style>

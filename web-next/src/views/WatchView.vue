@@ -3,12 +3,8 @@
     <!-- Main stream area -->
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Toolbar -->
-      <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-800">
-        <select
-          v-model="selectedMonitorId"
-          class="rounded-md bg-gray-800 border border-gray-700 text-sm text-gray-300 px-2 py-1
-                 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-white/5 glass-subtle">
+        <select v-model="selectedMonitorId" class="select-glass">
           <option value="" disabled>Select monitor</option>
           <option v-for="m in monitorStore.monitorList" :key="m.Id" :value="m.Id">
             {{ m.Name }}
@@ -21,8 +17,8 @@
         />
         <div class="flex-1" />
         <button
-          class="rounded-md bg-gray-800 px-3 py-1 text-sm text-gray-300 hover:bg-gray-700 transition-colors"
-          :class="{ 'bg-blue-900 text-blue-300': cycling }"
+          class="btn-glass rounded-lg px-3 py-1 text-sm transition-colors"
+          :class="{ 'bg-primary-500/20 text-primary-300 border-primary-500/30': cycling }"
           @click="toggleCycle"
         >
           {{ cycling ? 'Stop Cycle' : 'Auto Cycle' }}
@@ -46,7 +42,7 @@
       </div>
 
       <!-- Monitor info + PTZ -->
-      <div v-if="currentMonitor" class="flex items-center gap-4 px-4 py-3 border-t border-gray-800">
+      <div v-if="currentMonitor" class="flex items-center gap-4 px-4 py-3 border-t border-white/5 glass-subtle">
         <div class="flex-1 space-y-1">
           <h2 class="text-sm font-medium text-gray-200">{{ currentMonitor.Name }}</h2>
           <div class="flex items-center gap-4 text-xs text-gray-400">
@@ -63,8 +59,8 @@
     </div>
 
     <!-- Event sidebar -->
-    <aside class="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-gray-800 overflow-auto">
-      <div class="px-4 py-3 border-b border-gray-800">
+    <aside class="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-white/5 overflow-auto glass-subtle">
+      <div class="px-4 py-3 border-b border-white/5">
         <h3 class="text-sm font-medium text-gray-300">Recent Events</h3>
       </div>
       <div class="p-4">

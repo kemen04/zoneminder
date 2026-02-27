@@ -10,9 +10,9 @@
         type="text"
         autocomplete="username"
         required
-        class="w-full rounded-md bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100
-               placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500
-               focus:border-transparent"
+        class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-gray-100
+               placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500
+               focus:border-transparent transition-colors"
         placeholder="admin"
       />
     </div>
@@ -26,22 +26,23 @@
         type="password"
         autocomplete="current-password"
         required
-        class="w-full rounded-md bg-gray-800 border border-gray-700 px-3 py-2 text-gray-100
-               placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500
-               focus:border-transparent"
+        class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-gray-100
+               placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500
+               focus:border-transparent transition-colors"
       />
     </div>
-    <div v-if="auth.loginError" class="rounded-md bg-red-900/50 border border-red-700 p-3">
+    <div v-if="auth.loginError" class="rounded-lg glass bg-red-900/30 border border-red-500/30 p-3">
       <p class="text-sm text-red-300">{{ auth.loginError }}</p>
     </div>
     <button
       type="submit"
       :disabled="auth.isLoggingIn"
-      class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white
-             hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500
-             focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50
-             disabled:cursor-not-allowed transition-colors"
+      class="w-full btn-gradient rounded-lg px-4 py-2 text-sm font-semibold
+             focus:outline-none focus:ring-2 focus:ring-primary-500
+             focus:ring-offset-2 focus:ring-offset-gray-900
+             flex items-center justify-center gap-2"
     >
+      <span v-if="auth.isLoggingIn" class="spinner" style="width: 1rem; height: 1rem; border-width: 2px;" />
       {{ auth.isLoggingIn ? 'Signing in...' : 'Sign in' }}
     </button>
   </form>

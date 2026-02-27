@@ -3,12 +3,12 @@
     <!-- Sidebar -->
     <aside
       :class="[sidebarOpen ? 'w-56' : 'w-16']"
-      class="flex flex-col border-r border-gray-800 bg-gray-950 transition-all duration-200"
+      class="flex flex-col glass-strong transition-all duration-300"
     >
       <!-- Logo -->
-      <div class="flex h-14 items-center px-4 border-b border-gray-800">
-        <span v-if="sidebarOpen" class="text-lg font-bold text-blue-400">ZoneMinder</span>
-        <span v-else class="text-lg font-bold text-blue-400">ZM</span>
+      <div class="flex h-14 items-center px-4 border-b border-white/5">
+        <span v-if="sidebarOpen" class="text-lg font-bold bg-gradient-to-r from-primary-400 to-primary-300 bg-clip-text text-transparent">ZoneMinder</span>
+        <span v-else class="text-lg font-bold bg-gradient-to-r from-primary-400 to-primary-300 bg-clip-text text-transparent">ZM</span>
       </div>
 
       <!-- Nav -->
@@ -26,13 +26,13 @@
       </nav>
 
       <!-- Footer -->
-      <div class="border-t border-gray-800 p-2 space-y-1">
+      <div class="border-t border-white/5 p-2 space-y-1">
         <button
           :title="sidebarOpen ? 'Collapse' : 'Expand'"
           class="nav-link w-full"
           @click="sidebarOpen = !sidebarOpen"
         >
-          <SidebarIcon class="h-5 w-5 shrink-0" :class="{ 'rotate-180': !sidebarOpen }" />
+          <SidebarIcon class="h-5 w-5 shrink-0 transition-transform duration-300" :class="{ 'rotate-180': !sidebarOpen }" />
           <span v-if="sidebarOpen">Collapse</span>
         </button>
         <button class="nav-link w-full text-red-400" @click="handleLogout">
@@ -97,13 +97,13 @@ const navItems = [
 </script>
 
 <style scoped>
-@reference "tailwindcss";
+@reference "../style.css";
 
 .nav-link {
-  @apply flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-400
-         hover:bg-gray-800 hover:text-gray-200 transition-colors;
+  @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400
+         hover:bg-white/5 hover:text-gray-200 transition-colors;
 }
 .nav-link-active {
-  @apply bg-gray-800 text-blue-400;
+  @apply bg-white/8 text-primary-400 border-l-2 border-primary-400;
 }
 </style>

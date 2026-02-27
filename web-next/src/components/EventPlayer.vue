@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col bg-gray-900 rounded-lg overflow-hidden">
+  <div class="flex flex-col glass rounded-xl shadow-md overflow-hidden border border-white/5">
     <div class="relative aspect-video bg-black">
       <video
         v-if="videoUrl"

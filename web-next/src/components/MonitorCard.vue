@@ -1,7 +1,7 @@
 <template>
   <div
-    class="group relative rounded-lg overflow-hidden bg-gray-900 border border-gray-800
-           hover:border-gray-600 transition-colors cursor-pointer"
+    class="group relative rounded-xl overflow-hidden bg-surface-100 shadow-md hover-lift
+           cursor-pointer"
     @click="$router.push(`/watch/${monitor.Id}`)"
   >
     <MonitorStream
@@ -10,7 +10,7 @@
       :width="monitor.Width"
       :height="monitor.Height"
     />
-    <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+    <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-3">
       <div class="flex items-center justify-between">
         <span class="text-sm font-medium text-white truncate">
           {{ monitor.Name }}

@@ -1,17 +1,13 @@
 <template>
   <div class="h-full flex flex-col lg:flex-row">
     <!-- Event list panel -->
-    <div class="flex-1 flex flex-col min-w-0 border-r border-gray-800">
+    <div class="flex-1 flex flex-col min-w-0 border-r border-white/5">
       <!-- Toolbar -->
-      <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-800 flex-wrap">
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-white/5 glass-subtle flex-wrap">
         <h1 class="text-lg font-semibold text-gray-100 mr-2">Events</h1>
 
         <!-- Monitor filter -->
-        <select
-          v-model="filters.monitorId"
-          class="rounded-md bg-gray-800 border border-gray-700 text-sm text-gray-300 px-2 py-1
-                 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
+        <select v-model="filters.monitorId" class="select-glass">
           <option value="">All Monitors</option>
           <option v-for="m in monitorStore.monitorList" :key="m.Id" :value="m.Id">
             {{ m.Name }}
@@ -23,10 +19,10 @@
           <button
             v-for="qf in quickFilters"
             :key="qf.label"
-            class="rounded-md px-2 py-1 text-xs transition-colors"
+            class="btn-glass rounded-lg px-2 py-1 text-xs"
             :class="activeQuickFilter === qf.label
-              ? 'bg-blue-900 text-blue-300'
-              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'"
+              ? 'bg-primary-500/20 text-primary-300 border-primary-500/30'
+              : ''"
             @click="applyQuickFilter(qf)"
           >
             {{ qf.label }}
@@ -38,12 +34,11 @@
           v-model="filters.minScore"
           type="number"
           placeholder="Min score"
-          class="w-24 rounded-md bg-gray-800 border border-gray-700 text-sm text-gray-300 px-2 py-1
-                 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          class="select-glass w-24"
         />
 
         <button
-          class="rounded-md bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-500 transition-colors"
+          class="btn-gradient rounded-lg px-3 py-1 text-sm"
           @click="fetchEvents"
         >
           Search
