@@ -28,11 +28,12 @@
       <!-- Stream -->
       <div class="flex-1 relative bg-black">
         <MonitorStream
-          v-if="currentMonitor"
-          :monitor-id="currentMonitor.Id"
-          :monitor-name="currentMonitor.Name"
-          :width="currentMonitor.Width"
-          :height="currentMonitor.Height"
+          v-if="selectedMonitorId"
+          :key="selectedMonitorId"
+          :monitor-id="selectedMonitorId"
+          :monitor-name="currentMonitor?.Name ?? ''"
+          :width="currentMonitor?.Width"
+          :height="currentMonitor?.Height"
           mode="stream"
           class="w-full h-full"
         />
