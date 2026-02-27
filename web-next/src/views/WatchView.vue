@@ -90,7 +90,9 @@ const router = useRouter()
 const monitorStore = useMonitorStore()
 const api = useApi()
 
-const selectedMonitorId = ref('')
+const selectedMonitorId = ref(
+  typeof route.params.id === 'string' ? route.params.id : '',
+)
 const recentEvents = ref<ZmEvent[]>([])
 const eventsLoading = ref(false)
 const cycling = ref(false)
@@ -168,11 +170,11 @@ watch(
   { immediate: true },
 )
 
-onMounted(() => {
+onMounted(async () => {
   if (!monitorStore.monitors.length) {
-    monitorStore.fetchMonitors()
+    await monitorStore.fetchMonitors()
   }
-  // Default to first monitor if none selected
+  // Route param takes priority; fall back to first monitor
   if (!selectedMonitorId.value && monitorStore.monitorList.length > 0) {
     selectedMonitorId.value = monitorStore.monitorList[0].Id
   }
