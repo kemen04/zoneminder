@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col glass rounded-xl shadow-md overflow-hidden border border-white/5">
+  <div class="flex flex-col glass rounded-xl shadow-md overflow-hidden border border-divider">
     <div class="relative aspect-video bg-black">
       <video
         v-if="videoUrl"
@@ -9,22 +9,22 @@
         autoplay
         class="w-full h-full object-contain"
       />
-      <div v-else class="flex items-center justify-center h-full text-gray-500 text-sm">
+      <div v-else class="flex items-center justify-center h-full text-muted text-sm">
         Select an event to play
       </div>
     </div>
     <div v-if="event" class="p-3 space-y-2">
       <div class="flex items-center justify-between">
-        <h3 class="text-sm font-medium text-gray-200">{{ event.Name }}</h3>
-        <span class="text-xs text-gray-500">{{ event.Cause }}</span>
+        <h3 class="text-sm font-medium text-heading">{{ event.Name }}</h3>
+        <span class="text-xs text-muted">{{ event.Cause }}</span>
       </div>
-      <div class="flex items-center gap-4 text-xs text-gray-400">
+      <div class="flex items-center gap-4 text-xs text-soft">
         <span>{{ formatDate(event.StartDateTime) }}</span>
         <span>{{ formatDuration(event.Length) }}</span>
         <span>{{ event.Frames }} frames</span>
         <span>Score: {{ event.MaxScore }}</span>
       </div>
-      <div v-if="event.Notes" class="text-xs text-gray-500">
+      <div v-if="event.Notes" class="text-xs text-muted">
         {{ event.Notes }}
       </div>
     </div>

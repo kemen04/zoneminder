@@ -1,7 +1,7 @@
 <template>
   <form class="w-full max-w-sm space-y-4" @submit.prevent="handleSubmit">
     <div>
-      <label for="username" class="block text-sm font-medium text-gray-300 mb-1">
+      <label for="username" class="block text-sm font-medium text-body mb-1">
         Username
       </label>
       <input
@@ -10,14 +10,15 @@
         type="text"
         autocomplete="username"
         required
-        class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-gray-100
-               placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500
+        class="w-full rounded-lg border px-3 py-2
+               placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary-500
                focus:border-transparent transition-colors"
+        style="background: var(--input-bg); border-color: var(--input-border); color: var(--input-text);"
         placeholder="admin"
       />
     </div>
     <div>
-      <label for="password" class="block text-sm font-medium text-gray-300 mb-1">
+      <label for="password" class="block text-sm font-medium text-body mb-1">
         Password
       </label>
       <input
@@ -26,9 +27,10 @@
         type="password"
         autocomplete="current-password"
         required
-        class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-gray-100
-               placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500
+        class="w-full rounded-lg border px-3 py-2
+               placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary-500
                focus:border-transparent transition-colors"
+        style="background: var(--input-bg); border-color: var(--input-border); color: var(--input-text);"
       />
     </div>
     <div v-if="auth.loginError" class="rounded-lg glass bg-red-900/30 border border-red-500/30 p-3">
@@ -39,8 +41,9 @@
       :disabled="auth.isLoggingIn"
       class="w-full btn-gradient rounded-lg px-4 py-2 text-sm font-semibold
              focus:outline-none focus:ring-2 focus:ring-primary-500
-             focus:ring-offset-2 focus:ring-offset-gray-900
+             focus:ring-offset-2
              flex items-center justify-center gap-2"
+      :style="{ '--tw-ring-offset-color': 'var(--ring-offset-bg)' }"
     >
       <span v-if="auth.isLoggingIn" class="spinner" style="width: 1rem; height: 1rem; border-width: 2px;" />
       {{ auth.isLoggingIn ? 'Signing in...' : 'Sign in' }}

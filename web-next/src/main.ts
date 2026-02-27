@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import { VueQueryPlugin } from '@tanstack/vue-query'
 import App from './App.vue'
 import router from './router'
+import { useThemeStore } from './stores/theme'
 import './style.css'
 
 // Load ZoneMinder's video-stream web components at runtime
@@ -29,8 +30,12 @@ async function loadVideoComponents() {
 loadVideoComponents()
 
 const app = createApp(App)
+const pinia = createPinia()
 
-app.use(createPinia())
+app.use(pinia)
+// Initialize theme before first paint so .dark class is set early
+useThemeStore()
+
 app.use(router)
 app.use(VueQueryPlugin)
 

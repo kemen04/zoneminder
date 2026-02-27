@@ -20,7 +20,7 @@
       class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-100/80 backdrop-blur-sm"
     >
       <span class="spinner" />
-      <span class="text-sm text-gray-400">{{ statusText }}</span>
+      <span class="text-sm text-soft">{{ statusText }}</span>
     </div>
   </div>
 </template>

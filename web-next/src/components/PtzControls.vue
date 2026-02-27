@@ -61,7 +61,7 @@
       >
         &minus;
       </button>
-      <span class="text-xs text-gray-500">Zoom</span>
+      <span class="text-xs text-muted">Zoom</span>
       <button
         class="ptz-btn text-xs px-3"
         title="Zoom In"
@@ -113,15 +113,15 @@ async function sendCommand(command: string) {
 @reference "../style.css";
 
 .ptz-btn {
-  @apply flex items-center justify-center w-10 h-10 rounded-xl text-gray-300
+  @apply flex items-center justify-center w-10 h-10 rounded-xl text-body
          transition-all duration-150;
-  background: rgb(255 255 255 / 0.06);
-  border: 1px solid rgb(255 255 255 / 0.08);
+  background: var(--btn-glass-bg);
+  border: 1px solid var(--btn-glass-border);
 }
 .ptz-btn:hover {
-  background: rgb(255 255 255 / 0.1);
-  border-color: rgb(255 255 255 / 0.15);
-  color: white;
+  background: var(--btn-glass-hover-bg);
+  border-color: var(--btn-glass-hover-border);
+  color: var(--btn-glass-hover-text);
   transform: scale(1.05);
 }
 .ptz-btn:active {

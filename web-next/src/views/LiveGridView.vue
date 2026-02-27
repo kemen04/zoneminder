@@ -1,8 +1,8 @@
 <template>
   <div class="h-full flex flex-col">
     <!-- Toolbar -->
-    <div class="flex items-center justify-between px-4 py-3 border-b border-white/5 glass-subtle">
-      <h1 class="text-lg font-semibold text-gray-100">Live Grid</h1>
+    <div class="flex items-center justify-between px-4 py-3 border-b border-divider glass-subtle">
+      <h1 class="text-lg font-semibold text-heading">Live Grid</h1>
       <div class="flex items-center gap-3">
         <!-- Group filter -->
         <select v-model="selectedGroup" class="select-glass">
@@ -28,7 +28,7 @@
         <div v-for="n in colCount * 2" :key="n" class="aspect-video rounded-xl skeleton" />
       </div>
       <div v-else-if="filteredMonitors.length === 0" class="flex items-center justify-center h-64">
-        <span class="text-gray-500">No monitors found</span>
+        <span class="text-muted">No monitors found</span>
       </div>
       <div
         v-else

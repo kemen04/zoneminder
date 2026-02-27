@@ -3,7 +3,7 @@
     <!-- Main stream area -->
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Toolbar -->
-      <div class="flex items-center gap-3 px-4 py-3 border-b border-white/5 glass-subtle">
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-divider glass-subtle">
         <select v-model="selectedMonitorId" class="select-glass">
           <option value="" disabled>Select monitor</option>
           <option v-for="m in monitorStore.monitorList" :key="m.Id" :value="m.Id">
@@ -36,16 +36,16 @@
           mode="stream"
           class="w-full h-full"
         />
-        <div v-else class="flex items-center justify-center h-full text-gray-500">
+        <div v-else class="flex items-center justify-center h-full text-muted">
           Select a monitor to watch
         </div>
       </div>
 
       <!-- Monitor info + PTZ -->
-      <div v-if="currentMonitor" class="flex items-center gap-4 px-4 py-3 border-t border-white/5 glass-subtle">
+      <div v-if="currentMonitor" class="flex items-center gap-4 px-4 py-3 border-t border-divider glass-subtle">
         <div class="flex-1 space-y-1">
-          <h2 class="text-sm font-medium text-gray-200">{{ currentMonitor.Name }}</h2>
-          <div class="flex items-center gap-4 text-xs text-gray-400">
+          <h2 class="text-sm font-medium text-heading">{{ currentMonitor.Name }}</h2>
+          <div class="flex items-center gap-4 text-xs text-soft">
             <span>{{ currentMonitor.Type }}</span>
             <span>{{ currentMonitor.Function }}</span>
             <span>{{ currentMonitor.Width }}x{{ currentMonitor.Height }}</span>
@@ -59,9 +59,9 @@
     </div>
 
     <!-- Event sidebar -->
-    <aside class="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-white/5 overflow-auto glass-subtle">
-      <div class="px-4 py-3 border-b border-white/5">
-        <h3 class="text-sm font-medium text-gray-300">Recent Events</h3>
+    <aside class="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-divider overflow-auto glass-subtle">
+      <div class="px-4 py-3 border-b border-divider">
+        <h3 class="text-sm font-medium text-body">Recent Events</h3>
       </div>
       <div class="p-4">
         <EventList

@@ -1,10 +1,10 @@
 <template>
   <div class="h-full flex flex-col lg:flex-row">
     <!-- Event list panel -->
-    <div class="flex-1 flex flex-col min-w-0 border-r border-white/5">
+    <div class="flex-1 flex flex-col min-w-0 border-r border-divider">
       <!-- Toolbar -->
-      <div class="flex items-center gap-3 px-4 py-3 border-b border-white/5 glass-subtle flex-wrap">
-        <h1 class="text-lg font-semibold text-gray-100 mr-2">Events</h1>
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-divider glass-subtle flex-wrap">
+        <h1 class="text-lg font-semibold text-heading mr-2">Events</h1>
 
         <!-- Monitor filter -->
         <select v-model="filters.monitorId" class="select-glass">
@@ -59,7 +59,7 @@
     </div>
 
     <!-- Player panel -->
-    <div class="w-full lg:w-[45%] xl:w-[40%] overflow-auto bg-gray-950">
+    <div class="w-full lg:w-[45%] xl:w-[40%] overflow-auto bg-page">
       <div class="p-4">
         <EventPlayer :event="selectedEvent" />
       </div>

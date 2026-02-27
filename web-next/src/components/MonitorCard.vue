@@ -21,8 +21,8 @@
         />
       </div>
       <div class="flex items-center gap-2 mt-0.5">
-        <span class="text-xs text-gray-400">{{ monitor.Function }}</span>
-        <span class="text-xs text-gray-500">{{ monitor.Width }}x{{ monitor.Height }}</span>
+        <span class="text-xs text-gray-300">{{ monitor.Function }}</span>
+        <span class="text-xs text-gray-400">{{ monitor.Width }}x{{ monitor.Height }}</span>
       </div>
     </div>
   </div>

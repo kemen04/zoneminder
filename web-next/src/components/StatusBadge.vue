@@ -30,9 +30,9 @@ const badgeClasses = computed(() => {
       return 'bg-red-500/10 text-red-300 ring-1 ring-red-500/20'
     case 'notrunning':
     case 'idle':
-      return 'bg-white/5 text-gray-400 ring-1 ring-white/10'
+      return 'bg-hover text-soft ring-1 ring-divider'
     default:
-      return 'bg-white/5 text-gray-400 ring-1 ring-white/10'
+      return 'bg-hover text-soft ring-1 ring-divider'
   }
 })
 
