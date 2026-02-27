@@ -97,15 +97,15 @@ const recentEvents = ref<ZmEvent[]>([])
 const eventsLoading = ref(false)
 const cycling = ref(false)
 let cycleTimer: ReturnType<typeof setInterval> | null = null
-const currentMonitor = computed(() => {
+const currentMonitorData = computed(() => {
   if (!selectedMonitorId.value) return null
-  return monitorStore.monitorById.get(selectedMonitorId.value)?.Monitor ?? null
+  return monitorStore.monitors.find(
+    (m) => m.Monitor.Id === selectedMonitorId.value,
+  ) ?? null
 })
 
-const currentStatus = computed(() => {
-  if (!selectedMonitorId.value) return null
-  return monitorStore.monitorById.get(selectedMonitorId.value)?.Monitor_Status ?? null
-})
+const currentMonitor = computed(() => currentMonitorData.value?.Monitor ?? null)
+const currentStatus = computed(() => currentMonitorData.value?.Monitor_Status ?? null)
 
 async function fetchRecentEvents() {
   if (!selectedMonitorId.value) {
