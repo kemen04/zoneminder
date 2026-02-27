@@ -75,7 +75,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, shallowRef, watch, watchEffect, onMounted, onUnmounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import MonitorStream from '@/components/MonitorStream.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
@@ -83,11 +84,13 @@ import PtzControls from '@/components/PtzControls.vue'
 import EventList from '@/components/EventList.vue'
 import { useMonitorStore } from '@/stores/monitors'
 import { useApi } from '@/composables/useApi'
+import type { Monitor, MonitorStatus } from '@/types/monitor'
 import type { ZmEvent } from '@/types/event'
 
 const route = useRoute()
 const router = useRouter()
 const monitorStore = useMonitorStore()
+const { monitors: monitorsRef } = storeToRefs(monitorStore)
 const api = useApi()
 
 const selectedMonitorId = ref(
@@ -97,15 +100,21 @@ const recentEvents = ref<ZmEvent[]>([])
 const eventsLoading = ref(false)
 const cycling = ref(false)
 let cycleTimer: ReturnType<typeof setInterval> | null = null
-const currentMonitorData = computed(() => {
-  if (!selectedMonitorId.value) return null
-  return monitorStore.monitors.find(
-    (m) => m.Monitor.Id === selectedMonitorId.value,
-  ) ?? null
-})
 
-const currentMonitor = computed(() => currentMonitorData.value?.Monitor ?? null)
-const currentStatus = computed(() => currentMonitorData.value?.Monitor_Status ?? null)
+const currentMonitor = shallowRef<Monitor | null>(null)
+const currentStatus = shallowRef<MonitorStatus | null>(null)
+
+watchEffect(() => {
+  const id = selectedMonitorId.value
+  if (!id) {
+    currentMonitor.value = null
+    currentStatus.value = null
+    return
+  }
+  const mws = monitorsRef.value.find((m) => m.Monitor.Id === id)
+  currentMonitor.value = mws?.Monitor ?? null
+  currentStatus.value = mws?.Monitor_Status ?? null
+})
 
 async function fetchRecentEvents() {
   if (!selectedMonitorId.value) {
@@ -171,12 +180,12 @@ watch(
 )
 
 onMounted(async () => {
-  if (!monitorStore.monitors.length) {
+  if (!monitorsRef.value.length) {
     await monitorStore.fetchMonitors()
   }
   // Route param takes priority; fall back to first monitor
-  if (!selectedMonitorId.value && monitorStore.monitorList.length > 0) {
-    selectedMonitorId.value = monitorStore.monitorList[0].Id
+  if (!selectedMonitorId.value && monitorsRef.value.length > 0) {
+    selectedMonitorId.value = monitorsRef.value[0].Monitor.Id
   }
 })
 
