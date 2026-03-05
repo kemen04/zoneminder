@@ -5,13 +5,6 @@ import { apiFetch } from '@/lib/api'
 import type { ZmEvent, EventsResponse } from '@/types/event'
 import type { TimelineSegment, TimelineWindow, ZoomLevel } from '@/types/timeline'
 
-/** Format Date as 'YYYY-MM-DD HH:MM:SS' for ZM's CakePHP API */
-function toZmDateTime(ms: number): string {
-  const d = new Date(ms)
-  const pad = (n: number) => n.toString().padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-}
-
 function eventToSegment(ev: ZmEvent): TimelineSegment {
   const startMs = new Date(ev.StartDateTime).getTime()
   const lengthSec = parseFloat(ev.Length) || 0
@@ -93,8 +86,9 @@ export const useTimelineStore = defineStore('timeline', () => {
   }
 
   /** Fetch events for a single monitor within the current window.
-   *  Uses ZM's CakePHP named-parameter URL format:
-   *  /events/index/MonitorId:X/StartDateTime >=:date/StartDateTime <=:date.json
+   *  Avoids comparison operators in the URL (they cause 500 errors on many
+   *  ZM setups due to mod_security / PHP $_GET mangling). Instead, fetches
+   *  recent events by MonitorId and filters by time window client-side.
    */
   async function fetchEventsForMonitor(monitorId: string): Promise<void> {
     const auth = useAuthStore()
@@ -111,44 +105,53 @@ export const useTimelineStore = defineStore('timeline', () => {
 
     try {
       const token = await auth.ensureValidToken()
-      const zmStart = toZmDateTime(w.startMs)
-      const zmEnd = toZmDateTime(w.endMs)
 
       const allSegments: TimelineSegment[] = []
       let page = 1
       let hasMore = true
+      let reachedWindowStart = false
 
-      // Build the CakePHP named-parameter path:
-      //   /events/index/MonitorId:X/StartDateTime >=:YYYY-MM-DD HH:MM:SS.json
-      // Spaces in field names and values must be %20-encoded in the path
-      const encVal = (s: string) => s.replace(/ /g, '%20')
-      const filterPath =
-        `MonitorId:${monitorId}` +
-        `/StartDateTime%20%3E%3D:${encVal(zmStart)}` +
-        `/StartDateTime%20%3C%3D:${encVal(zmEnd)}`
-
-      while (hasMore) {
+      // Fetch pages of events sorted newest-first. Stop when we've gone
+      // past the start of the visible window (older than window.startMs).
+      while (hasMore && !reachedWindowStart) {
         const params = new URLSearchParams({
+          MonitorId: monitorId,
           sort: 'StartDateTime',
-          direction: 'asc',
+          direction: 'desc',
           limit: '200',
           page: page.toString(),
         })
 
         const data = await apiFetch<EventsResponse>(
-          `/events/index/${filterPath}.json?${params.toString()}`,
+          `/events.json?${params.toString()}`,
           token,
         )
 
         const events = (data.events ?? []).map((e) => e.Event)
-        allSegments.push(...events.map(eventToSegment))
+
+        for (const ev of events) {
+          const seg = eventToSegment(ev)
+          // Keep segments that overlap the visible window
+          if (seg.endMs >= w.startMs && seg.startMs <= w.endMs) {
+            allSegments.push(seg)
+          }
+          // If this event ends before the window start, all remaining
+          // events (older) are also outside the window — stop fetching
+          if (seg.endMs < w.startMs) {
+            reachedWindowStart = true
+            break
+          }
+        }
 
         hasMore = data.pagination?.nextPage === true && events.length > 0
         page++
 
-        // Safety: don't paginate more than 10 pages (2000 events)
+        // Safety: don't paginate more than 10 pages
         if (page > 10) break
       }
+
+      // Sort segments chronologically (we fetched newest-first)
+      allSegments.sort((a, b) => a.startMs - b.startMs)
 
       eventsByMonitor.value.set(monitorId, allSegments)
       fetchedRanges.value.set(monitorId, { startMs: w.startMs, endMs: w.endMs })
