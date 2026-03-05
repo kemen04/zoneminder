@@ -1,8 +1,8 @@
 <template>
-  <div class="flex flex-col glass rounded-xl shadow-md overflow-hidden border border-divider">
-    <div class="relative aspect-video bg-black">
+  <div class="flex flex-col glass rounded-xl shadow-md overflow-hidden border border-divider h-full">
+    <div class="relative flex-1 min-h-0 bg-black">
       <video
-        v-if="videoUrl"
+        v-if="videoUrl && !videoError"
         ref="videoEl"
         :src="videoUrl"
         controls
@@ -10,14 +10,20 @@
         class="w-full h-full object-contain"
         @loadeddata="onVideoLoaded"
         @timeupdate="onTimeUpdate"
+        @error="videoError = true"
+      />
+      <img
+        v-else-if="event"
+        :src="snapshotUrl"
+        class="w-full h-full object-contain"
       />
       <div v-else class="flex items-center justify-center h-full text-muted text-sm">
-        Select an event on the timeline
+        Click an event segment on the timeline
       </div>
     </div>
 
     <!-- Controls -->
-    <div v-if="event" class="flex items-center gap-2 px-3 py-2 border-t border-divider">
+    <div v-if="event" class="flex items-center gap-2 px-3 py-2 border-t border-divider shrink-0">
       <!-- Frame step -->
       <button class="btn-glass rounded-lg px-2 py-1 text-xs" @click="frameStep(-1)">&#9198;</button>
       <button class="btn-glass rounded-lg px-2 py-1 text-xs" @click="frameStep(1)">&#9197;</button>
@@ -58,12 +64,19 @@ const emit = defineEmits<{
 const auth = useAuthStore()
 const videoEl = ref<HTMLVideoElement>()
 const playbackRate = ref(1)
+const videoError = ref(false)
 // Track last emitted ms to avoid seek-back loops from our own timeupdate emissions
 let lastEmittedMs = 0
 
 const videoUrl = computed(() => {
-  if (!props.event || !props.event.defaultVideo) return ''
+  if (!props.event) return ''
+  // Always try video — ZM can generate on the fly even without DefaultVideo
   return `/zm/index.php?view=view_video&eid=${props.event.eventId}&token=${auth.accessToken}`
+})
+
+const snapshotUrl = computed(() => {
+  if (!props.event) return ''
+  return `/zm/index.php?view=image&eid=${props.event.eventId}&fid=snapshot&token=${auth.accessToken}`
 })
 
 function onVideoLoaded() {
@@ -107,6 +120,8 @@ function frameStep(direction: number) {
 
 // When event changes, reload video
 watch(() => props.event?.eventId, () => {
+  videoError.value = false
+  lastEmittedMs = 0
   if (videoEl.value) {
     videoEl.value.load()
   }
