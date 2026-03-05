@@ -137,17 +137,17 @@ export const useMonitorStore = defineStore('monitors', () => {
     }
   }
 
-  async function fetchLoad(): Promise<string> {
+  async function fetchLoad(): Promise<number[]> {
     const auth = useAuthStore()
     try {
       const token = await auth.ensureValidToken()
-      const data = await apiFetch<{ load: string }>(
+      const data = await apiFetch<{ load: number[] }>(
         '/host/getLoad.json',
         token,
       )
-      return data.load ?? ''
+      return Array.isArray(data.load) ? data.load : []
     } catch {
-      return ''
+      return []
     }
   }
 

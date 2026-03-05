@@ -21,18 +21,27 @@
       </div>
     </div>
 
-    <!-- System Load -->
+    <!-- CPU Load -->
     <div class="glass rounded-xl p-4 border border-divider">
-      <div class="flex items-center gap-3">
-        <div class="h-10 w-10 rounded-lg flex items-center justify-center bg-primary-500/10">
-          <svg class="h-5 w-5 text-primary-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M13 7H7v6h6V7z" />
-            <path fill-rule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clip-rule="evenodd" />
-          </svg>
+      <div class="space-y-2">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-lg flex items-center justify-center" :class="cpuIconBg">
+            <svg class="h-5 w-5" :class="cpuIconColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M13 7H7v6h6V7z" />
+              <path fill-rule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <div class="text-xs text-soft uppercase tracking-wider">CPU Load</div>
+            <div class="text-sm font-medium text-heading">{{ cpuLabel }}</div>
+          </div>
         </div>
-        <div>
-          <div class="text-xs text-soft uppercase tracking-wider">Load</div>
-          <div class="text-sm font-medium text-heading">{{ loadDisplay }}</div>
+        <div v-if="cpuPct >= 0" class="h-1.5 rounded-full bg-hover overflow-hidden">
+          <div
+            class="h-full rounded-full transition-all duration-500"
+            :class="cpuBarColor"
+            :style="{ width: `${Math.min(cpuPct, 100)}%` }"
+          />
         </div>
       </div>
     </div>
@@ -74,9 +83,44 @@ import { useMonitorStore } from '@/stores/monitors'
 
 const monitorStore = useMonitorStore()
 const daemonRunning = ref(false)
-const loadDisplay = ref('...')
+const cpuCores = ref(navigator.hardwareConcurrency || 4)
+const loadAvg = ref<number[]>([])
 const diskUsage = ref<Record<string, { space: string; color: string }>>({})
 const diskLoading = ref(true)
+
+// 1-min load average as a percentage of available CPU cores
+const cpuPct = computed(() => {
+  if (!loadAvg.value.length) return -1
+  return Math.round((loadAvg.value[0] / cpuCores.value) * 100)
+})
+
+const cpuLabel = computed(() => {
+  if (!loadAvg.value.length) return '...'
+  const pct = cpuPct.value
+  const status = pct <= 50 ? 'Low' : pct <= 80 ? 'Moderate' : pct <= 100 ? 'High' : 'Overloaded'
+  return `${status} (${pct}%)`
+})
+
+const cpuBarColor = computed(() => {
+  const pct = cpuPct.value
+  if (pct > 100) return 'bg-red-400'
+  if (pct > 80) return 'bg-yellow-400'
+  return 'bg-emerald-400'
+})
+
+const cpuIconBg = computed(() => {
+  const pct = cpuPct.value
+  if (pct > 100) return 'bg-red-500/10'
+  if (pct > 80) return 'bg-yellow-500/10'
+  return 'bg-primary-500/10'
+})
+
+const cpuIconColor = computed(() => {
+  const pct = cpuPct.value
+  if (pct > 100) return 'text-red-400'
+  if (pct > 80) return 'text-yellow-400'
+  return 'text-primary-400'
+})
 
 /** Format GB value for display */
 function formatSpace(gb: number): string {
@@ -120,7 +164,7 @@ const diskEntries = computed(() => {
 
 onMounted(() => {
   monitorStore.fetchDaemonStatus().then((v) => { daemonRunning.value = v })
-  monitorStore.fetchLoad().then((v) => { loadDisplay.value = v || 'N/A' })
+  monitorStore.fetchLoad().then((v) => { loadAvg.value = v })
   monitorStore.fetchDiskUsage().then((v) => { diskUsage.value = v; diskLoading.value = false })
 })
 </script>
