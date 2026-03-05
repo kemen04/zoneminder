@@ -1,7 +1,7 @@
 <template>
   <div
     ref="cellEl"
-    class="relative rounded-xl overflow-hidden bg-surface-100 cursor-pointer group"
+    class="relative h-full rounded-xl overflow-hidden bg-surface-100 cursor-pointer group"
     :class="{ 'ring-2 ring-red-500 animate-pulse': isAlarmed }"
     @click="$emit('select', monitor.Id)"
   >

@@ -225,7 +225,7 @@ function setupObserver() {
 watch(pagedMonitors, async () => {
   await nextTick()
   setupObserver()
-})
+}, { immediate: true })
 
 // Escape key to close expanded
 function onKeydown(e: KeyboardEvent) {
