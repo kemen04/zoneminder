@@ -31,6 +31,11 @@ const router = createRouter({
       component: () => import('@/views/EventsView.vue'),
     },
     {
+      path: '/timeline/:monitorId?',
+      name: 'timeline',
+      component: () => import('@/views/TimelineView.vue'),
+    },
+    {
       path: '/logs',
       name: 'logs',
       component: () => import('@/views/LogsView.vue'),
