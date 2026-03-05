@@ -40,6 +40,12 @@
         <span class="text-xs text-muted">j/k: navigate, Space: play, Del: delete</span>
       </div>
 
+      <!-- Error banner -->
+      <div v-if="error" class="mx-4 mt-3 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center justify-between">
+        <span>{{ error }}</span>
+        <button class="text-xs underline ml-4" @click="fetchEvents">Retry</button>
+      </div>
+
       <!-- Event list/grid -->
       <div ref="eventListContainer" class="flex-1 overflow-auto p-4">
         <!-- Thumbnail grid view -->
@@ -112,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import EventFilters from '@/components/EventFilters.vue'
 import EventList from '@/components/EventList.vue'
@@ -133,12 +139,13 @@ const selectedEvent = ref<ZmEvent | null>(null)
 const selectedIds = ref<Set<string>>(new Set())
 const selectedIndex = ref(-1)
 const loading = ref(false)
+const error = ref('')
 const page = ref(1)
 const pageCount = ref(1)
 const viewMode = ref<'list' | 'grid'>('list')
 const eventListContainer = ref<HTMLElement>()
 
-const filters = reactive<EventFilterValues>({
+const filters = ref<EventFilterValues>({
   monitorId: '',
   startDate: '',
   endDate: '',
@@ -173,6 +180,7 @@ function scoreClass(score: string): string {
 
 async function fetchEvents() {
   loading.value = true
+  error.value = ''
   try {
     const params = new URLSearchParams({
       sort: 'StartDateTime',
@@ -180,11 +188,12 @@ async function fetchEvents() {
       limit: '25',
       page: page.value.toString(),
     })
-    if (filters.monitorId) params.set('MonitorId', filters.monitorId)
-    if (filters.startDate) params.set('StartDateTime >=', filters.startDate)
-    if (filters.endDate) params.set('StartDateTime <=', filters.endDate)
-    if (filters.minScore) params.set('MaxScore >=', filters.minScore)
-    if (filters.alarmOnly) params.set('AlarmFrames >=', '1')
+    const f = filters.value
+    if (f.monitorId) params.set('MonitorId', f.monitorId)
+    if (f.startDate) params.set('StartDateTime >=', f.startDate)
+    if (f.endDate) params.set('StartDateTime <=', f.endDate)
+    if (f.minScore) params.set('MaxScore >=', f.minScore)
+    if (f.alarmOnly) params.set('AlarmFrames >=', '1')
 
     const data = await api.fetch<{
       events: { Event: ZmEvent }[]
@@ -194,7 +203,9 @@ async function fetchEvents() {
     events.value = (data.events ?? []).map((e) => e.Event)
     pageCount.value = data.pagination?.pageCount ?? 1
     page.value = data.pagination?.page ?? 1
-  } catch {
+  } catch (e) {
+    console.error('Failed to fetch events:', e)
+    error.value = e instanceof Error ? e.message : 'Failed to load events'
     events.value = []
   } finally {
     loading.value = false
