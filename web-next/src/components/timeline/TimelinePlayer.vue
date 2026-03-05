@@ -58,8 +58,8 @@ const emit = defineEmits<{
 const auth = useAuthStore()
 const videoEl = ref<HTMLVideoElement>()
 const playbackRate = ref(1)
-// Track whether we're currently seeking to avoid loops
-let isSeeking = false
+// Track last emitted ms to avoid seek-back loops from our own timeupdate emissions
+let lastEmittedMs = 0
 
 const videoUrl = computed(() => {
   if (!props.event || !props.event.defaultVideo) return ''
@@ -75,9 +75,10 @@ function onVideoLoaded() {
 }
 
 function onTimeUpdate() {
-  if (isSeeking || !videoEl.value || !props.event) return
+  if (!videoEl.value || !props.event) return
   // Convert video currentTime to absolute epoch ms
   const epochMs = props.event.startMs + videoEl.value.currentTime * 1000
+  lastEmittedMs = epochMs
   emit('timeupdate', epochMs)
 }
 
@@ -85,9 +86,7 @@ function seekToPlayhead() {
   if (!videoEl.value || !props.event) return
   const offsetMs = props.playheadMs - props.event.startMs
   if (offsetMs >= 0 && offsetMs <= props.event.length * 1000) {
-    isSeeking = true
     videoEl.value.currentTime = offsetMs / 1000
-    setTimeout(() => { isSeeking = false }, 100)
   }
 }
 
@@ -113,9 +112,11 @@ watch(() => props.event?.eventId, () => {
   }
 })
 
-// When playhead changes externally (scrubbing), seek if within current event
+// When playhead changes externally (scrubbing), seek if within current event.
+// Skip if the change came from our own timeupdate emission (within 500ms tolerance).
 watch(() => props.playheadMs, (ms) => {
-  if (!props.event || isSeeking) return
+  if (!props.event) return
+  if (Math.abs(ms - lastEmittedMs) < 500) return
   if (ms >= props.event.startMs && ms <= props.event.endMs) {
     seekToPlayhead()
   }
