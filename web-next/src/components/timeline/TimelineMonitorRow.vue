@@ -1,7 +1,7 @@
 <template>
   <div
     class="flex items-center h-12 cursor-pointer hover:bg-hover transition-colors group"
-    @click="$emit('select-monitor', monitorId)"
+    @click="$emit('select-monitor', monitorId, (props.window.startMs + props.window.endMs) / 2)"
   >
     <!-- Monitor name label -->
     <div class="w-32 lg:w-40 shrink-0 px-3 truncate text-sm text-body group-hover:text-heading transition-colors">
@@ -51,7 +51,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'select-monitor': [id: string]
+  'select-monitor': [id: string, clickedMs: number]
   'select-event': [eventId: string, clickedMs: number]
 }>()
 
@@ -119,14 +119,49 @@ function onCanvasClick(e: MouseEvent) {
   const rect = canvas.getBoundingClientRect()
   const x = e.clientX - rect.left
   const clickedMs = xToMs(x, props.window, container.clientWidth)
-  const seg = hitTest(x, props.segments, props.window, container.clientWidth)
 
+  // Direct hit on a segment
+  const seg = hitTest(x, props.segments, props.window, container.clientWidth)
   if (seg) {
     emit('select-event', seg.eventId, clickedMs)
-  } else {
-    // Clicked empty space — still enter detail at this time
-    emit('select-monitor', props.monitorId)
+    return
   }
+
+  // No direct hit — find the nearest segment within a reasonable pixel range
+  const nearest = findNearest(clickedMs, props.segments, props.window, container.clientWidth)
+  if (nearest) {
+    emit('select-event', nearest.eventId, clickedMs)
+  } else {
+    emit('select-monitor', props.monitorId, clickedMs)
+  }
+}
+
+/** Find the segment nearest to clickedMs if within 8px tolerance */
+function findNearest(
+  clickedMs: number,
+  segments: TimelineSegment[],
+  win: TimelineWindow,
+  width: number,
+): TimelineSegment | null {
+  const tolerancePx = 8
+  const msPerPx = (win.endMs - win.startMs) / width
+  const toleranceMs = tolerancePx * msPerPx
+  let best: TimelineSegment | null = null
+  let bestDist = Infinity
+
+  for (const seg of segments) {
+    // Distance from click to segment (0 if inside)
+    let dist: number
+    if (clickedMs < seg.startMs) dist = seg.startMs - clickedMs
+    else if (clickedMs > seg.endMs) dist = clickedMs - seg.endMs
+    else dist = 0
+
+    if (dist < bestDist && dist <= toleranceMs) {
+      bestDist = dist
+      best = seg
+    }
+  }
+  return best
 }
 
 watch([() => props.segments, () => props.window, () => props.selectedEventId], render, { deep: true })

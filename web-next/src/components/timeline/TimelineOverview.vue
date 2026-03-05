@@ -19,7 +19,7 @@
           :segments="item.segments"
           :window="timelineWindow"
           :selected-event-id="selectedEventId"
-          @select-monitor="$emit('select-monitor', $event)"
+          @select-monitor="(id: string, clickedMs: number) => $emit('select-monitor', id, clickedMs)"
           @select-event="(eventId: string, clickedMs: number) => $emit('select-event', { monitorId: item.monitor.Monitor.Id, eventId, clickedMs })"
         />
       </div>
@@ -50,7 +50,7 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
-  'select-monitor': [id: string]
+  'select-monitor': [id: string, clickedMs: number]
   'select-event': [payload: { monitorId: string; eventId: string; clickedMs: number }]
 }>()
 

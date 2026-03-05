@@ -96,10 +96,14 @@ function onGroup(id: string) {
   refetchVisible()
 }
 
-function onSelectMonitor(id: string) {
+function onSelectMonitor(id: string, clickedMs?: number) {
   store.selectMonitor(id)
+  if (clickedMs) store.playheadMs = clickedMs
   router.replace(`/timeline/${id}`)
   store.fetchEventsForMonitor(id)
+
+  // Auto-select the nearest event to the clicked/current time
+  autoSelectNearestEvent(id)
 }
 
 function onSelectEvent(payload: { monitorId: string; eventId: string; clickedMs: number }) {
@@ -107,6 +111,33 @@ function onSelectEvent(payload: { monitorId: string; eventId: string; clickedMs:
   store.selectEvent(payload.eventId)
   store.playheadMs = payload.clickedMs
   router.replace(`/timeline/${payload.monitorId}`)
+}
+
+/** Find and select the event closest to the current playhead */
+function autoSelectNearestEvent(monitorId: string) {
+  const segments = store.eventsByMonitor.get(monitorId)
+  if (!segments?.length) return
+
+  const t = store.playheadMs
+  let best = segments[0]
+  let bestDist = Infinity
+
+  for (const seg of segments) {
+    let dist: number
+    if (t < seg.startMs) dist = seg.startMs - t
+    else if (t > seg.endMs) dist = t - seg.endMs
+    else dist = 0
+    if (dist < bestDist) {
+      bestDist = dist
+      best = seg
+    }
+  }
+
+  store.selectEvent(best.eventId)
+  // If playhead isn't inside an event, snap it to the nearest one
+  if (t < best.startMs || t > best.endMs) {
+    store.playheadMs = best.startMs
+  }
 }
 
 function refetchVisible() {
