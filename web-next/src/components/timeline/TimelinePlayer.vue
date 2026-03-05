@@ -1,8 +1,9 @@
 <template>
   <div class="flex flex-col glass rounded-xl shadow-md overflow-hidden border border-divider h-full">
     <div class="relative flex-1 min-h-0 bg-black">
+      <!-- MP4 video (events with DefaultVideo) -->
       <video
-        v-if="videoUrl && !videoError"
+        v-if="hasVideo && !videoError"
         ref="videoEl"
         :src="videoUrl"
         controls
@@ -12,11 +13,15 @@
         @timeupdate="onTimeUpdate"
         @error="videoError = true"
       />
+
+      <!-- MJPEG streaming playback (events stored as JPEGs) -->
       <img
-        v-else-if="event"
-        :src="snapshotUrl"
+        v-else-if="event && mjpegUrl"
+        :src="mjpegUrl"
         class="w-full h-full object-contain"
       />
+
+      <!-- No event selected -->
       <div v-else class="flex items-center justify-center h-full text-muted text-sm">
         Click an event segment on the timeline
       </div>
@@ -24,16 +29,25 @@
 
     <!-- Controls -->
     <div v-if="event" class="flex items-center gap-2 px-3 py-2 border-t border-divider shrink-0">
-      <!-- Frame step -->
-      <button class="btn-glass rounded-lg px-2 py-1 text-xs" @click="frameStep(-1)">&#9198;</button>
-      <button class="btn-glass rounded-lg px-2 py-1 text-xs" @click="frameStep(1)">&#9197;</button>
+      <!-- Play/Pause for MJPEG -->
+      <button
+        v-if="!hasVideo || videoError"
+        class="btn-glass rounded-lg px-2 py-1 text-xs"
+        @click="mjpegPaused = !mjpegPaused"
+      >
+        {{ mjpegPaused ? '&#9654; Play' : '&#9646;&#9646; Pause' }}
+      </button>
+
+      <!-- Frame step (video only) -->
+      <template v-if="hasVideo && !videoError">
+        <button class="btn-glass rounded-lg px-2 py-1 text-xs" @click="frameStep(-1)">&#9198;</button>
+        <button class="btn-glass rounded-lg px-2 py-1 text-xs" @click="frameStep(1)">&#9197;</button>
+      </template>
 
       <!-- Playback speed -->
-      <select v-model="playbackRate" class="select-glass text-xs py-0.5 w-16" @change="updatePlaybackRate">
-        <option :value="0.25">0.25x</option>
+      <select v-model="playbackRate" class="select-glass text-xs py-0.5 w-16" @change="onRateChange">
         <option :value="0.5">0.5x</option>
         <option :value="1">1x</option>
-        <option :value="1.5">1.5x</option>
         <option :value="2">2x</option>
         <option :value="4">4x</option>
       </select>
@@ -65,31 +79,42 @@ const auth = useAuthStore()
 const videoEl = ref<HTMLVideoElement>()
 const playbackRate = ref(1)
 const videoError = ref(false)
-// Track last emitted ms to avoid seek-back loops from our own timeupdate emissions
+const mjpegPaused = ref(false)
 let lastEmittedMs = 0
 
+const hasVideo = computed(() => !!props.event?.defaultVideo)
+
 const videoUrl = computed(() => {
-  if (!props.event) return ''
-  // Always try video — ZM can generate on the fly even without DefaultVideo
+  if (!props.event?.defaultVideo) return ''
   return `/zm/index.php?view=view_video&eid=${props.event.eventId}&token=${auth.accessToken}`
 })
 
-const snapshotUrl = computed(() => {
-  if (!props.event) return ''
-  return `/zm/index.php?view=image&eid=${props.event.eventId}&fid=snapshot&token=${auth.accessToken}`
+/** MJPEG streaming URL for event playback via nph-zms */
+const mjpegUrl = computed(() => {
+  if (!props.event || mjpegPaused.value) return ''
+  const rate = Math.round(playbackRate.value * 100)
+  const params = new URLSearchParams({
+    source: 'event',
+    mode: 'jpeg',
+    event: props.event.eventId,
+    frame: '1',
+    scale: '100',
+    rate: rate.toString(),
+    maxfps: '30',
+    token: auth.accessToken,
+  })
+  return `/zm/cgi-bin/nph-zms?${params.toString()}`
 })
 
 function onVideoLoaded() {
   if (videoEl.value) {
     videoEl.value.playbackRate = playbackRate.value
-    // If playhead is within this event, seek to that position
     seekToPlayhead()
   }
 }
 
 function onTimeUpdate() {
   if (!videoEl.value || !props.event) return
-  // Convert video currentTime to absolute epoch ms
   const epochMs = props.event.startMs + videoEl.value.currentTime * 1000
   lastEmittedMs = epochMs
   emit('timeupdate', epochMs)
@@ -103,10 +128,11 @@ function seekToPlayhead() {
   }
 }
 
-function updatePlaybackRate() {
-  if (videoEl.value) {
+function onRateChange() {
+  if (videoEl.value && hasVideo.value && !videoError.value) {
     videoEl.value.playbackRate = playbackRate.value
   }
+  // MJPEG rate change is handled reactively via mjpegUrl recomputing
 }
 
 function frameStep(direction: number) {
@@ -118,17 +144,18 @@ function frameStep(direction: number) {
   videoEl.value.currentTime += direction / fps
 }
 
-// When event changes, reload video
+// When event changes, reset state
 watch(() => props.event?.eventId, () => {
   videoError.value = false
+  mjpegPaused.value = false
   lastEmittedMs = 0
   if (videoEl.value) {
     videoEl.value.load()
   }
 })
 
-// When playhead changes externally (scrubbing), seek if within current event.
-// Skip if the change came from our own timeupdate emission (within 500ms tolerance).
+// When playhead changes externally (scrubbing), seek video.
+// Skip if the change came from our own timeupdate emission.
 watch(() => props.playheadMs, (ms) => {
   if (!props.event) return
   if (Math.abs(ms - lastEmittedMs) < 500) return
