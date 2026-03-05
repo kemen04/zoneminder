@@ -83,22 +83,24 @@ import { useMonitorStore } from '@/stores/monitors'
 
 const monitorStore = useMonitorStore()
 const daemonRunning = ref(false)
-const cpuCores = ref(navigator.hardwareConcurrency || 4)
 const loadAvg = ref<number[]>([])
+const cpuCores = ref(0)
 const diskUsage = ref<Record<string, { space: string; color: string }>>({})
 const diskLoading = ref(true)
 
-// 1-min load average as a percentage of available CPU cores
+// 1-min load average as a percentage of server CPU cores
 const cpuPct = computed(() => {
-  if (!loadAvg.value.length) return -1
+  if (!loadAvg.value.length || !cpuCores.value) return -1
   return Math.round((loadAvg.value[0] / cpuCores.value) * 100)
 })
 
 const cpuLabel = computed(() => {
   if (!loadAvg.value.length) return '...'
+  const load1 = loadAvg.value[0].toFixed(2)
+  if (!cpuCores.value) return load1
   const pct = cpuPct.value
   const status = pct <= 50 ? 'Low' : pct <= 80 ? 'Moderate' : pct <= 100 ? 'High' : 'Overloaded'
-  return `${status} (${pct}%)`
+  return `${status} (${pct}%) — ${load1}`
 })
 
 const cpuBarColor = computed(() => {
@@ -164,7 +166,7 @@ const diskEntries = computed(() => {
 
 onMounted(() => {
   monitorStore.fetchDaemonStatus().then((v) => { daemonRunning.value = v })
-  monitorStore.fetchLoad().then((v) => { loadAvg.value = v })
+  monitorStore.fetchLoad().then((v) => { loadAvg.value = v.load; cpuCores.value = v.cpus })
   monitorStore.fetchDiskUsage().then((v) => { diskUsage.value = v; diskLoading.value = false })
 })
 </script>

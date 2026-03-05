@@ -58,10 +58,16 @@ class HostController extends AppController {
 
   function getLoad() {
     $load = sys_getloadavg();
+    $cpus = 1;
+    if (is_readable('/proc/cpuinfo')) {
+      $cpuinfo = file_get_contents('/proc/cpuinfo');
+      $cpus = max(1, substr_count($cpuinfo, 'processor'));
+    }
 
     $this->set(array(
       'load' => $load,
-      '_serialize' => array('load')
+      'cpus' => $cpus,
+      '_serialize' => array('load', 'cpus')
     ));
   }
 

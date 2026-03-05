@@ -137,17 +137,20 @@ export const useMonitorStore = defineStore('monitors', () => {
     }
   }
 
-  async function fetchLoad(): Promise<number[]> {
+  async function fetchLoad(): Promise<{ load: number[]; cpus: number }> {
     const auth = useAuthStore()
     try {
       const token = await auth.ensureValidToken()
-      const data = await apiFetch<{ load: number[] }>(
+      const data = await apiFetch<{ load: number[]; cpus?: number }>(
         '/host/getLoad.json',
         token,
       )
-      return Array.isArray(data.load) ? data.load : []
+      return {
+        load: Array.isArray(data.load) ? data.load : [],
+        cpus: data.cpus ?? 0,
+      }
     } catch {
-      return []
+      return { load: [], cpus: 0 }
     }
   }
 
