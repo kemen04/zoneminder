@@ -5,6 +5,13 @@ import { apiFetch } from '@/lib/api'
 import type { ZmEvent, EventsResponse } from '@/types/event'
 import type { TimelineSegment, TimelineWindow, ZoomLevel } from '@/types/timeline'
 
+/** Format Date as 'YYYY-MM-DD HH:MM:SS' for ZM's CakePHP API */
+function toZmDateTime(ms: number): string {
+  const d = new Date(ms)
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
 function eventToSegment(ev: ZmEvent): TimelineSegment {
   const startMs = new Date(ev.StartDateTime).getTime()
   const lengthSec = parseFloat(ev.Length) || 0
@@ -96,44 +103,51 @@ export const useTimelineStore = defineStore('timeline', () => {
       return
     }
 
-    const token = await auth.ensureValidToken()
-    const isoStart = new Date(w.startMs).toISOString()
-    const isoEnd = new Date(w.endMs).toISOString()
+    try {
+      const token = await auth.ensureValidToken()
+      const zmStart = toZmDateTime(w.startMs)
+      const zmEnd = toZmDateTime(w.endMs)
 
-    const allSegments: TimelineSegment[] = []
-    let page = 1
-    let hasMore = true
+      const allSegments: TimelineSegment[] = []
+      let page = 1
+      let hasMore = true
 
-    while (hasMore) {
-      const params = new URLSearchParams({
-        'MonitorId': monitorId,
-        'StartDateTime >=': isoStart,
-        'StartDateTime <=': isoEnd,
-        sort: 'StartDateTime',
-        direction: 'asc',
-        limit: '200',
-        page: page.toString(),
-      })
+      while (hasMore) {
+        const params = new URLSearchParams({
+          'MonitorId': monitorId,
+          'StartDateTime >=': zmStart,
+          'StartDateTime <=': zmEnd,
+          sort: 'StartDateTime',
+          direction: 'asc',
+          limit: '200',
+          page: page.toString(),
+        })
 
-      const data = await apiFetch<EventsResponse>(
-        `/events.json?${params.toString()}`,
-        token,
-      )
+        const data = await apiFetch<EventsResponse>(
+          `/events.json?${params.toString()}`,
+          token,
+        )
 
-      const events = (data.events ?? []).map((e) => e.Event)
-      allSegments.push(...events.map(eventToSegment))
+        const events = (data.events ?? []).map((e) => e.Event)
+        allSegments.push(...events.map(eventToSegment))
 
-      hasMore = data.pagination?.nextPage === true && events.length > 0
-      page++
+        hasMore = data.pagination?.nextPage === true && events.length > 0
+        page++
 
-      // Safety: don't paginate more than 10 pages (2000 events)
-      if (page > 10) break
+        // Safety: don't paginate more than 10 pages (2000 events)
+        if (page > 10) break
+      }
+
+      eventsByMonitor.value.set(monitorId, allSegments)
+      fetchedRanges.value.set(monitorId, { startMs: w.startMs, endMs: w.endMs })
+      // Trigger reactivity
+      eventsByMonitor.value = new Map(eventsByMonitor.value)
+    } catch (e) {
+      console.warn(`Failed to fetch events for monitor ${monitorId}:`, e)
+      // Set empty segments so we don't retry immediately
+      eventsByMonitor.value.set(monitorId, [])
+      eventsByMonitor.value = new Map(eventsByMonitor.value)
     }
-
-    eventsByMonitor.value.set(monitorId, allSegments)
-    fetchedRanges.value.set(monitorId, { startMs: w.startMs, endMs: w.endMs })
-    // Trigger reactivity
-    eventsByMonitor.value = new Map(eventsByMonitor.value)
   }
 
   /** Batch fetch for multiple monitors, max 6 concurrent */
