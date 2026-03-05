@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useMonitorStore } from '@/stores/monitors'
 import { useJanus } from '@/composables/useJanus'
@@ -220,6 +220,7 @@ function connectWebRtc() {
   const wsUrl = `${wsProtocol}//${window.location.host}/go2rtc/ws?src=${props.monitorName}_0`
 
   requestAnimationFrame(() => {
+    if (!alive.value) return
     el.background = true
     el.muted = true
     el.src = wsUrl
@@ -367,5 +368,5 @@ watch(() => [props.monitorId, props.monitorName], () => {
 defineExpose({ pause, resume })
 
 onMounted(init)
-onUnmounted(stopAllStreams)
+onBeforeUnmount(stopAllStreams)
 </script>
