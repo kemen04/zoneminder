@@ -123,11 +123,11 @@ export const useMonitorStore = defineStore('monitors', () => {
     }
   }
 
-  async function fetchDiskUsage(): Promise<Record<string, { total: number; used: number; space: number }>> {
+  async function fetchDiskUsage(): Promise<Record<string, { space: string; color: string }>> {
     const auth = useAuthStore()
     try {
       const token = await auth.ensureValidToken()
-      const data = await apiFetch<{ usage: Record<string, { total: number; used: number; space: number }> }>(
+      const data = await apiFetch<{ usage: Record<string, { space: string; color: string }> }>(
         '/host/getDiskPercent.json',
         token,
       )

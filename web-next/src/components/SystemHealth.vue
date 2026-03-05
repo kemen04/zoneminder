@@ -44,47 +44,79 @@
         <div v-if="diskLoading" class="flex items-center gap-2 text-sm text-muted">
           <span class="spinner" /> Loading...
         </div>
-        <div v-else-if="Object.keys(diskUsage).length === 0" class="text-sm text-muted">
+        <div v-else-if="diskEntries.length === 0" class="text-sm text-muted">
           No data
         </div>
-        <div v-for="(info, path) in diskUsage" :key="path" class="space-y-1">
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-body truncate max-w-[120px]" :title="String(path)">{{ path }}</span>
-            <span class="text-soft">{{ diskPercent(info) }}%</span>
+        <template v-else>
+          <!-- Per-monitor bars (proportional to largest) -->
+          <div v-for="entry in diskEntries" :key="entry.name" class="space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-body truncate max-w-[120px]" :title="entry.name">{{ entry.name }}</span>
+              <span class="text-soft">{{ entry.label }}</span>
+            </div>
+            <div class="h-1.5 rounded-full bg-hover overflow-hidden">
+              <div
+                class="h-full rounded-full transition-all duration-500"
+                :class="entry.name === 'Total' ? 'bg-red-400' : 'bg-primary-400'"
+                :style="{ width: `${entry.pct}%` }"
+              />
+            </div>
           </div>
-          <div class="h-1.5 rounded-full bg-hover overflow-hidden">
-            <div
-              class="h-full rounded-full transition-all duration-500"
-              :class="diskBarColor(diskPercent(info))"
-              :style="{ width: `${diskPercent(info)}%` }"
-            />
-          </div>
-        </div>
+        </template>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useMonitorStore } from '@/stores/monitors'
 
 const monitorStore = useMonitorStore()
 const daemonRunning = ref(false)
 const loadDisplay = ref('...')
-const diskUsage = ref<Record<string, { total: number; used: number; space: number }>>({})
+const diskUsage = ref<Record<string, { space: string; color: string }>>({})
 const diskLoading = ref(true)
 
-function diskPercent(info: { total: number; used: number; space: number }): number {
-  if (!info.total) return 0
-  return Math.round((info.used / info.total) * 100)
+/** Format GB value for display */
+function formatSpace(gb: number): string {
+  if (gb >= 1000) return `${(gb / 1000).toFixed(1)} TB`
+  if (gb >= 1) return `${gb.toFixed(1)} GB`
+  return `${(gb * 1024).toFixed(0)} MB`
 }
 
-function diskBarColor(percent: number): string {
-  if (percent >= 90) return 'bg-red-400'
-  if (percent >= 70) return 'bg-yellow-400'
-  return 'bg-emerald-400'
-}
+/** Build display entries: each monitor + Total, bars proportional to max */
+const diskEntries = computed(() => {
+  const raw = diskUsage.value
+  if (!raw || Object.keys(raw).length === 0) return []
+
+  const entries = Object.entries(raw).map(([name, info]) => ({
+    name,
+    space: parseFloat(info.space) || 0,
+  }))
+
+  const maxSpace = Math.max(...entries.map((e) => e.space), 0.001)
+
+  // Put Total last, others sorted by space descending
+  const monitors = entries.filter((e) => e.name !== 'Total').sort((a, b) => b.space - a.space)
+  const total = entries.find((e) => e.name === 'Total')
+
+  const result = monitors.map((e) => ({
+    name: e.name,
+    label: formatSpace(e.space),
+    pct: Math.round((e.space / maxSpace) * 100),
+  }))
+
+  if (total) {
+    result.push({
+      name: 'Total',
+      label: formatSpace(total.space),
+      pct: 100,
+    })
+  }
+
+  return result
+})
 
 onMounted(() => {
   monitorStore.fetchDaemonStatus().then((v) => { daemonRunning.value = v })
