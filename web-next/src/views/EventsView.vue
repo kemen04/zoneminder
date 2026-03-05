@@ -128,6 +128,7 @@ import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import type { ZmEvent } from '@/types/event'
 import type { EventFilterValues } from '@/components/EventFilters.vue'
+import { isNumericId } from '@/lib/validate'
 
 const route = useRoute()
 const monitorStore = useMonitorStore()
@@ -313,7 +314,7 @@ function onKeydown(e: KeyboardEvent) {
 watch(
   () => route.query.eventId,
   async (id) => {
-    if (id && typeof id === 'string' && !selectedEvent.value) {
+    if (isNumericId(id) && !selectedEvent.value) {
       try {
         const data = await api.fetch<{ event: { Event: ZmEvent } }>(`/events/${id}.json`)
         selectedEvent.value = data.event?.Event ?? null

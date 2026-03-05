@@ -5,9 +5,7 @@ import { login as apiLogin, refreshAccessToken, TokenExpiredError } from '@/lib/
 const STORAGE_KEY = 'zm-auth'
 
 interface StoredAuth {
-  accessToken: string
   refreshToken: string
-  accessExpiresAt: number
   refreshExpiresAt: number
   username: string
 }
@@ -21,7 +19,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggingIn = ref(false)
   const loginError = ref('')
 
-  const isAuthenticated = computed(() => !!accessToken.value)
+  const isAuthenticated = computed(() => !!accessToken.value || !!refreshToken.value)
 
   function loadFromStorage() {
     try {
@@ -32,9 +30,8 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.removeItem(STORAGE_KEY)
         return
       }
-      accessToken.value = stored.accessToken
+      // Only refresh token is persisted; access token stays in memory
       refreshToken.value = stored.refreshToken
-      accessExpiresAt.value = stored.accessExpiresAt
       refreshExpiresAt.value = stored.refreshExpiresAt
       username.value = stored.username
     } catch {
@@ -44,9 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   function saveToStorage() {
     const data: StoredAuth = {
-      accessToken: accessToken.value,
       refreshToken: refreshToken.value,
-      accessExpiresAt: accessExpiresAt.value,
       refreshExpiresAt: refreshExpiresAt.value,
       username: username.value,
     }

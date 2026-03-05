@@ -86,12 +86,16 @@ import SourceTab from '@/components/monitor-edit/SourceTab.vue'
 import RecordingTab from '@/components/monitor-edit/RecordingTab.vue'
 import AnalysisTab from '@/components/monitor-edit/AnalysisTab.vue'
 import TimestampTab from '@/components/monitor-edit/TimestampTab.vue'
+import { isNumericId } from '@/lib/validate'
 
 const route = useRoute()
 const router = useRouter()
 const monitorStore = useMonitorStore()
 
-const monitorId = computed(() => route.params.id as string | undefined)
+const monitorId = computed(() => {
+  const id = route.params.id
+  return isNumericId(id) ? id : undefined
+})
 const isNew = computed(() => route.name === 'monitor-new')
 
 const activeTab = ref('general')
@@ -157,6 +161,10 @@ function validate(): string[] {
   if (!form.Name?.trim()) errs.push('Monitor name is required')
   if (!form.Width || parseInt(form.Width) <= 0) errs.push('Width must be greater than 0')
   if (!form.Height || parseInt(form.Height) <= 0) errs.push('Height must be greater than 0')
+  if (form.Port) {
+    const port = parseInt(form.Port)
+    if (isNaN(port) || port < 1 || port > 65535) errs.push('Port must be between 1 and 65535')
+  }
   return errs
 }
 

@@ -24,19 +24,19 @@
       </div>
       <div class="sm:col-span-2">
         <label class="block text-sm font-medium text-heading mb-1">Host / URL</label>
-        <input v-model="form.Host" type="text" class="select-glass w-full" placeholder="e.g., 192.168.1.100 or user:pass@host" />
+        <input v-model="form.Host" type="text" maxlength="255" class="select-glass w-full" placeholder="e.g., 192.168.1.100 or user:pass@host" />
       </div>
       <div>
         <label class="block text-sm font-medium text-heading mb-1">Port</label>
-        <input v-model="form.Port" type="text" class="select-glass w-full" placeholder="e.g., 554" />
+        <input v-model="form.Port" type="number" min="1" max="65535" class="select-glass w-full" placeholder="e.g., 554" />
       </div>
       <div>
         <label class="block text-sm font-medium text-heading mb-1">Path</label>
-        <input v-model="form.Path" type="text" class="select-glass w-full" placeholder="e.g., /stream1" />
+        <input v-model="form.Path" type="text" maxlength="255" class="select-glass w-full" placeholder="e.g., /stream1" />
       </div>
       <div class="sm:col-span-2">
         <label class="block text-sm font-medium text-heading mb-1">Second Path (substream)</label>
-        <input v-model="form.SecondPath" type="text" class="select-glass w-full" placeholder="Optional alternate stream path" />
+        <input v-model="form.SecondPath" type="text" maxlength="255" class="select-glass w-full" placeholder="Optional alternate stream path" />
       </div>
       <div>
         <label class="block text-sm font-medium text-heading mb-1">Width</label>

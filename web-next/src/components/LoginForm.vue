@@ -53,18 +53,25 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+const route = useRoute()
 const router = useRouter()
 const user = ref('')
 const pass = ref('')
 
+function safeRedirect(): string {
+  const r = route.query.redirect
+  if (typeof r === 'string' && r.startsWith('/') && !r.includes('://')) return r
+  return '/'
+}
+
 async function handleSubmit() {
   try {
     await auth.login(user.value, pass.value)
-    router.push('/')
+    router.push(safeRedirect())
   } catch {
     // Error is displayed via auth.loginError
   }

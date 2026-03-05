@@ -123,6 +123,7 @@ import { useMonitorStore } from '@/stores/monitors'
 import { useApi } from '@/composables/useApi'
 import type { Monitor, MonitorStatus } from '@/types/monitor'
 import type { ZmEvent } from '@/types/event'
+import { isNumericId } from '@/lib/validate'
 
 const route = useRoute()
 const router = useRouter()
@@ -131,7 +132,7 @@ const { monitors: monitorsRef } = storeToRefs(monitorStore)
 const api = useApi()
 
 const selectedMonitorId = ref(
-  typeof route.params.id === 'string' ? route.params.id : '',
+  isNumericId(route.params.id) ? route.params.id : '',
 )
 const selectedGroup = ref('')
 const recentEvents = ref<ZmEvent[]>([])
@@ -249,7 +250,7 @@ watch(selectedMonitorId, () => {
 watch(
   () => route.params.id,
   (id) => {
-    if (id && typeof id === 'string') {
+    if (isNumericId(id)) {
       selectedMonitorId.value = id
     }
   },

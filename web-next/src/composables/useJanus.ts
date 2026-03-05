@@ -26,7 +26,7 @@ export function useJanus() {
   }
 
   function transaction(): string {
-    return Math.random().toString(36).substring(2, 14)
+    return crypto.randomUUID()
   }
 
   async function connect(monitorId: string, videoEl: HTMLVideoElement): Promise<void> {
@@ -64,9 +64,8 @@ export function useJanus() {
       }, 25_000)
 
       // Create peer connection
-      pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-      })
+      // No STUN needed — ZM cameras are on LAN, no NAT traversal required
+      pc = new RTCPeerConnection({ iceServers: [] })
 
       pc.ontrack = (event) => {
         if (event.streams[0]) {

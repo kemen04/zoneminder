@@ -49,6 +49,7 @@ import TimelineDetail from '@/components/timeline/TimelineDetail.vue'
 import { useTimelineStore } from '@/stores/timeline'
 import { useMonitorStore } from '@/stores/monitors'
 import type { ZoomLevel } from '@/types/timeline'
+import { isNumericId } from '@/lib/validate'
 
 const route = useRoute()
 const router = useRouter()
@@ -206,7 +207,7 @@ watch(
 watch(
   () => route.params.monitorId,
   (id) => {
-    if (id && typeof id === 'string') {
+    if (isNumericId(id)) {
       store.selectMonitor(id)
       store.fetchEventsForMonitor(id)
     } else if (!id) {
@@ -227,7 +228,7 @@ onMounted(async () => {
 
   // Handle initial route param (e.g., /timeline/5)
   const id = route.params.monitorId
-  if (id && typeof id === 'string') {
+  if (isNumericId(id)) {
     store.selectMonitor(id)
   }
 
