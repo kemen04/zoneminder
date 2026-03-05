@@ -96,13 +96,11 @@ function onGroup(id: string) {
   refetchVisible()
 }
 
-function onSelectMonitor(id: string, clickedMs?: number) {
+async function onSelectMonitor(id: string, clickedMs?: number) {
   store.selectMonitor(id)
   if (clickedMs) store.playheadMs = clickedMs
   router.replace(`/timeline/${id}`)
-  store.fetchEventsForMonitor(id)
-
-  // Auto-select the nearest event to the clicked/current time
+  await store.fetchEventsForMonitor(id)
   autoSelectNearestEvent(id)
 }
 
@@ -192,6 +190,15 @@ function debouncedRefetch() {
     refetchVisible()
   }, 200)
 }
+
+// When segments load for the selected monitor, auto-select nearest event if none selected
+watch(
+  () => store.selectedMonitorId && store.eventsByMonitor.get(store.selectedMonitorId),
+  (segments) => {
+    if (!store.selectedMonitorId || store.selectedEventId || !segments?.length) return
+    autoSelectNearestEvent(store.selectedMonitorId)
+  },
+)
 
 // Route param handling for /timeline/:monitorId
 // Not immediate — onMounted initializes window first, then fetches.
