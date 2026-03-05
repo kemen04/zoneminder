@@ -40,7 +40,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import type { TimelineSegment, TimelineWindow } from '@/types/timeline'
-import { drawMonitorRow, hitTest, msToX } from '@/composables/useTimelineRenderer'
+import { drawMonitorRow, hitTest, msToX, xToMs } from '@/composables/useTimelineRenderer'
 
 const props = defineProps<{
   monitorId: string
@@ -52,7 +52,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'select-monitor': [id: string]
-  'select-event': [eventId: string]
+  'select-event': [eventId: string, clickedMs: number]
 }>()
 
 const canvasEl = ref<HTMLCanvasElement>()
@@ -118,10 +118,14 @@ function onCanvasClick(e: MouseEvent) {
 
   const rect = canvas.getBoundingClientRect()
   const x = e.clientX - rect.left
+  const clickedMs = xToMs(x, props.window, container.clientWidth)
   const seg = hitTest(x, props.segments, props.window, container.clientWidth)
 
   if (seg) {
-    emit('select-event', seg.eventId)
+    emit('select-event', seg.eventId, clickedMs)
+  } else {
+    // Clicked empty space — still enter detail at this time
+    emit('select-monitor', props.monitorId)
   }
 }
 

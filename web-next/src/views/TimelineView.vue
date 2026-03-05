@@ -102,18 +102,11 @@ function onSelectMonitor(id: string) {
   store.fetchEventsForMonitor(id)
 }
 
-function onSelectEvent(payload: { monitorId: string; eventId: string }) {
+function onSelectEvent(payload: { monitorId: string; eventId: string; clickedMs: number }) {
   store.selectMonitor(payload.monitorId)
   store.selectEvent(payload.eventId)
+  store.playheadMs = payload.clickedMs
   router.replace(`/timeline/${payload.monitorId}`)
-
-  // Set playhead to start of selected event
-  const seg = store.eventsByMonitor.get(payload.monitorId)?.find(
-    (s) => s.eventId === payload.eventId,
-  )
-  if (seg) {
-    store.playheadMs = seg.startMs
-  }
 }
 
 function refetchVisible() {
