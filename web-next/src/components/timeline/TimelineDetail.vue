@@ -1,7 +1,7 @@
 <template>
   <div class="flex-1 flex flex-col overflow-hidden">
-    <!-- Video player (top ~60%) -->
-    <div class="flex-[3] min-h-0">
+    <!-- Video player (fills available space above timeline) -->
+    <div class="flex-1 min-h-0">
       <TimelinePlayer
         :event="selectedSegment"
         :playhead-ms="playheadMs"
@@ -10,7 +10,7 @@
     </div>
 
     <!-- Event info bar -->
-    <div v-if="selectedSegment" class="flex items-center gap-4 px-4 py-2 border-y border-divider glass-subtle">
+    <div v-if="selectedSegment" class="flex items-center gap-4 px-4 py-2 border-y border-divider glass-subtle shrink-0">
       <span class="text-sm font-medium text-heading">{{ monitorName }}</span>
       <span class="text-xs text-soft">{{ selectedSegment.name }}</span>
       <span class="text-xs text-muted">{{ selectedSegment.cause }}</span>
@@ -19,8 +19,8 @@
       <span class="text-xs text-muted">{{ playheadTime }}</span>
     </div>
 
-    <!-- Timeline canvas (bottom ~40%) -->
-    <div class="flex-[2] min-h-0 relative">
+    <!-- Timeline canvas (fixed height at bottom) -->
+    <div class="h-28 shrink-0 relative">
       <div ref="canvasContainer" class="absolute inset-0">
         <!-- Event segments canvas -->
         <canvas
