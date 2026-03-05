@@ -12,6 +12,11 @@ const router = createRouter({
     },
     {
       path: '/',
+      name: 'dashboard',
+      component: () => import('@/views/DashboardView.vue'),
+    },
+    {
+      path: '/live',
       name: 'live-grid',
       component: () => import('@/views/LiveGridView.vue'),
     },
@@ -21,9 +26,34 @@ const router = createRouter({
       component: () => import('@/views/WatchView.vue'),
     },
     {
+      path: '/montage',
+      name: 'montage',
+      component: () => import('@/views/MontageView.vue'),
+    },
+    {
       path: '/events',
       name: 'events',
       component: () => import('@/views/EventsView.vue'),
+    },
+    {
+      path: '/logs',
+      name: 'logs',
+      component: () => import('@/views/LogsView.vue'),
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('@/views/SettingsView.vue'),
+    },
+    {
+      path: '/monitors/new',
+      name: 'monitor-new',
+      component: () => import('@/views/MonitorEditView.vue'),
+    },
+    {
+      path: '/monitors/:id/edit',
+      name: 'monitor-edit',
+      component: () => import('@/views/MonitorEditView.vue'),
     },
     {
       path: '/:pathMatch(.*)*',

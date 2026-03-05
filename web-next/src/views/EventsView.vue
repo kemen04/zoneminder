@@ -5,116 +5,170 @@
       <!-- Toolbar -->
       <div class="flex items-center gap-3 px-4 py-3 border-b border-divider glass-subtle flex-wrap">
         <h1 class="text-lg font-semibold text-heading mr-2">Events</h1>
+        <EventFilters v-model="filters" @search="fetchEvents" />
+      </div>
 
-        <!-- Monitor filter -->
-        <select v-model="filters.monitorId" class="select-glass">
-          <option value="">All Monitors</option>
-          <option v-for="m in monitorStore.monitorList" :key="m.Id" :value="m.Id">
-            {{ m.Name }}
-          </option>
-        </select>
-
-        <!-- Quick date filters -->
-        <div class="flex items-center gap-1">
-          <button
-            v-for="qf in quickFilters"
-            :key="qf.label"
-            class="btn-glass rounded-lg px-2 py-1 text-xs"
-            :class="activeQuickFilter === qf.label
-              ? 'bg-primary-500/20 text-primary-300 border-primary-500/30'
-              : ''"
-            @click="applyQuickFilter(qf)"
-          >
-            {{ qf.label }}
-          </button>
-        </div>
-
-        <!-- Min score -->
-        <input
-          v-model="filters.minScore"
-          type="number"
-          placeholder="Min score"
-          class="select-glass w-24"
-        />
-
-        <button
-          class="btn-gradient rounded-lg px-3 py-1 text-sm"
-          @click="fetchEvents"
-        >
-          Search
+      <!-- Bulk actions -->
+      <div v-if="selectedIds.size > 0" class="flex items-center gap-3 px-4 py-2 bg-primary-500/5 border-b border-divider">
+        <span class="text-sm text-body">{{ selectedIds.size }} selected</span>
+        <button class="btn-glass rounded-lg px-2 py-1 text-xs text-red-400" @click="bulkDelete">
+          Delete Selected
+        </button>
+        <button class="btn-glass rounded-lg px-2 py-1 text-xs" @click="selectedIds.clear()">
+          Clear
         </button>
       </div>
 
-      <!-- Event table -->
-      <div class="flex-1 overflow-auto p-4">
-        <EventList
-          :events="events"
-          :loading="loading"
-          :page="page"
-          :page-count="pageCount"
-          @select="selectEvent"
-          @page="changePage"
-        />
+      <!-- View toggle -->
+      <div class="flex items-center justify-between px-4 py-2 border-b border-divider">
+        <div class="flex items-center gap-2">
+          <button
+            class="btn-glass rounded-lg px-2 py-1 text-xs"
+            :class="viewMode === 'list' ? 'bg-primary-500/20 text-primary-300' : ''"
+            @click="viewMode = 'list'"
+          >
+            List
+          </button>
+          <button
+            class="btn-glass rounded-lg px-2 py-1 text-xs"
+            :class="viewMode === 'grid' ? 'bg-primary-500/20 text-primary-300' : ''"
+            @click="viewMode = 'grid'"
+          >
+            Thumbnails
+          </button>
+        </div>
+        <span class="text-xs text-muted">j/k: navigate, Space: play, Del: delete</span>
+      </div>
+
+      <!-- Event list/grid -->
+      <div ref="eventListContainer" class="flex-1 overflow-auto p-4">
+        <!-- Thumbnail grid view -->
+        <div v-if="viewMode === 'grid'" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div
+            v-for="(event, i) in events"
+            :key="event.Id"
+            class="group relative rounded-lg overflow-hidden bg-surface-100 cursor-pointer transition-all"
+            :class="{ 'ring-2 ring-primary-400': selectedEvent?.Id === event.Id, 'ring-2 ring-primary-300/50': selectedIds.has(event.Id) }"
+            @click="selectEvent(event, i)"
+          >
+            <div class="aspect-video bg-black">
+              <img
+                :src="thumbnailUrl(event)"
+                :alt="event.Name"
+                class="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+            <div class="p-2">
+              <div class="text-xs font-medium text-heading truncate">{{ monitorName(event.MonitorId) }}</div>
+              <div class="text-[10px] text-soft">{{ formatDate(event.StartDateTime) }}</div>
+              <div class="flex items-center justify-between mt-1">
+                <span class="text-[10px] text-soft">{{ event.Cause }}</span>
+                <span :class="scoreClass(event.MaxScore)" class="text-[10px]">{{ event.MaxScore }}</span>
+              </div>
+            </div>
+            <!-- Checkbox -->
+            <div class="absolute top-1.5 left-1.5">
+              <input
+                type="checkbox"
+                :checked="selectedIds.has(event.Id)"
+                class="accent-primary-500 h-3.5 w-3.5"
+                @click.stop
+                @change="toggleSelect(event.Id)"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- List view -->
+        <div v-else>
+          <EventList
+            :events="events"
+            :loading="loading"
+            :page="page"
+            :page-count="pageCount"
+            :selected-id="selectedEvent?.Id"
+            :selected-ids="selectedIds"
+            @select="(e, i) => selectEvent(e, i)"
+            @toggle-select="toggleSelect"
+            @page="changePage"
+          />
+        </div>
       </div>
     </div>
 
     <!-- Player panel -->
     <div class="w-full lg:w-[45%] xl:w-[40%] overflow-auto bg-page">
       <div class="p-4">
-        <EventPlayer :event="selectedEvent" />
+        <EventPlayer
+          :event="selectedEvent"
+          @prev="prevEvent"
+          @next="nextEvent"
+          @delete="deleteEvent"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import EventFilters from '@/components/EventFilters.vue'
 import EventList from '@/components/EventList.vue'
 import EventPlayer from '@/components/EventPlayer.vue'
 import { useMonitorStore } from '@/stores/monitors'
 import { useApi } from '@/composables/useApi'
+import { useAuthStore } from '@/stores/auth'
 import type { ZmEvent } from '@/types/event'
+import type { EventFilterValues } from '@/components/EventFilters.vue'
 
 const route = useRoute()
 const monitorStore = useMonitorStore()
+const auth = useAuthStore()
 const api = useApi()
 
 const events = ref<ZmEvent[]>([])
 const selectedEvent = ref<ZmEvent | null>(null)
+const selectedIds = ref<Set<string>>(new Set())
+const selectedIndex = ref(-1)
 const loading = ref(false)
 const page = ref(1)
 const pageCount = ref(1)
-const activeQuickFilter = ref('')
+const viewMode = ref<'list' | 'grid'>('list')
+const eventListContainer = ref<HTMLElement>()
 
-const filters = reactive({
+const filters = reactive<EventFilterValues>({
   monitorId: '',
   startDate: '',
   endDate: '',
   minScore: '',
+  alarmOnly: false,
 })
 
-const quickFilters = [
-  { label: 'Today', days: 0 },
-  { label: '24h', days: 1 },
-  { label: '7 days', days: 7 },
-  { label: '30 days', days: 30 },
-]
+function monitorName(id: string): string {
+  return monitorStore.monitorById.get(id)?.Monitor.Name ?? `Monitor ${id}`
+}
 
-function applyQuickFilter(qf: { label: string; days: number }) {
-  activeQuickFilter.value = qf.label
-  const now = new Date()
-  if (qf.days === 0) {
-    // Today: start of day
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    filters.startDate = start.toISOString().slice(0, 19)
-  } else {
-    const start = new Date(now.getTime() - qf.days * 86400_000)
-    filters.startDate = start.toISOString().slice(0, 19)
-  }
-  filters.endDate = ''
-  page.value = 1
-  fetchEvents()
+function thumbnailUrl(event: ZmEvent): string {
+  return `/zm/index.php?view=image&eid=${event.Id}&fid=snapshot&token=${auth.accessToken}`
+}
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function scoreClass(score: string): string {
+  const s = parseInt(score)
+  if (s >= 200) return 'text-red-400 font-medium'
+  if (s >= 100) return 'text-yellow-400'
+  return 'text-soft'
 }
 
 async function fetchEvents() {
@@ -130,6 +184,7 @@ async function fetchEvents() {
     if (filters.startDate) params.set('StartDateTime >=', filters.startDate)
     if (filters.endDate) params.set('StartDateTime <=', filters.endDate)
     if (filters.minScore) params.set('MaxScore >=', filters.minScore)
+    if (filters.alarmOnly) params.set('AlarmFrames >=', '1')
 
     const data = await api.fetch<{
       events: { Event: ZmEvent }[]
@@ -146,13 +201,101 @@ async function fetchEvents() {
   }
 }
 
-function selectEvent(event: ZmEvent) {
+function selectEvent(event: ZmEvent, index?: number) {
   selectedEvent.value = event
+  selectedIndex.value = index ?? events.value.findIndex((e) => e.Id === event.Id)
+}
+
+function toggleSelect(id: string) {
+  if (selectedIds.value.has(id)) {
+    selectedIds.value.delete(id)
+  } else {
+    selectedIds.value.add(id)
+  }
+  // Trigger reactivity
+  selectedIds.value = new Set(selectedIds.value)
+}
+
+function prevEvent() {
+  if (selectedIndex.value > 0) {
+    selectedIndex.value--
+    selectedEvent.value = events.value[selectedIndex.value]
+  }
+}
+
+function nextEvent() {
+  if (selectedIndex.value < events.value.length - 1) {
+    selectedIndex.value++
+    selectedEvent.value = events.value[selectedIndex.value]
+  }
+}
+
+async function deleteEvent(event: ZmEvent) {
+  if (!confirm(`Delete event "${event.Name}" from ${monitorName(event.MonitorId)}?`)) return
+  try {
+    await api.fetch(`/events/${event.Id}.json`, { method: 'DELETE' })
+    events.value = events.value.filter((e) => e.Id !== event.Id)
+    if (selectedEvent.value?.Id === event.Id) {
+      selectedEvent.value = events.value[selectedIndex.value] ?? events.value[selectedIndex.value - 1] ?? null
+    }
+  } catch {
+    // ignore
+  }
+}
+
+async function bulkDelete() {
+  const count = selectedIds.value.size
+  if (!confirm(`Delete ${count} event${count > 1 ? 's' : ''}? This cannot be undone.`)) return
+  const ids = [...selectedIds.value]
+  for (const id of ids) {
+    try {
+      await api.fetch(`/events/${id}.json`, { method: 'DELETE' })
+    } catch {
+      // continue
+    }
+  }
+  events.value = events.value.filter((e) => !selectedIds.value.has(e.Id))
+  selectedIds.value.clear()
+  if (selectedEvent.value && !events.value.find((e) => e.Id === selectedEvent.value!.Id)) {
+    selectedEvent.value = events.value[0] ?? null
+  }
 }
 
 function changePage(p: number) {
   page.value = p
   fetchEvents()
+}
+
+// Keyboard navigation
+function onKeydown(e: KeyboardEvent) {
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return
+
+  switch (e.key) {
+    case 'j':
+      nextEvent()
+      e.preventDefault()
+      break
+    case 'k':
+      prevEvent()
+      e.preventDefault()
+      break
+    case ' ':
+      // Toggle play/pause handled by EventPlayer
+      break
+    case 'ArrowLeft':
+      // Frame step back - handled by EventPlayer
+      break
+    case 'ArrowRight':
+      // Frame step forward - handled by EventPlayer
+      break
+    case 'Delete':
+    case 'Backspace':
+      if (selectedEvent.value) {
+        deleteEvent(selectedEvent.value)
+        e.preventDefault()
+      }
+      break
+  }
 }
 
 // Load event from URL query param
@@ -176,5 +319,10 @@ onMounted(() => {
     monitorStore.fetchMonitors()
   }
   fetchEvents()
+  document.addEventListener('keydown', onKeydown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', onKeydown)
 })
 </script>

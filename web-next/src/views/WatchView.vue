@@ -4,11 +4,45 @@
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Toolbar -->
       <div class="flex items-center gap-3 px-4 py-3 border-b border-divider glass-subtle">
-        <select v-model="selectedMonitorId" class="select-glass">
-          <option value="" disabled>Select monitor</option>
-          <option v-for="m in monitorStore.monitorList" :key="m.Id" :value="m.Id">
-            {{ m.Name }}
+        <!-- Group filter -->
+        <select v-model="selectedGroup" class="select-glass">
+          <option value="">All Monitors</option>
+          <option v-for="group in monitorStore.groups" :key="group.Id" :value="group.Id">
+            {{ group.Name }}
           </option>
+        </select>
+        <!-- Monitor select with optgroup by group -->
+        <select v-model="selectedMonitorId" class="select-glass flex-1 max-w-xs">
+          <option value="" disabled>Select monitor</option>
+          <template v-if="monitorStore.groups.length > 0 && !selectedGroup">
+            <optgroup
+              v-for="group in monitorStore.groups"
+              :key="group.Id"
+              :label="group.Name"
+            >
+              <option
+                v-for="m in groupMonitors(group.Id)"
+                :key="m.Id"
+                :value="m.Id"
+              >
+                {{ m.Name }}
+              </option>
+            </optgroup>
+            <optgroup label="Ungrouped">
+              <option
+                v-for="m in ungroupedMonitors"
+                :key="m.Id"
+                :value="m.Id"
+              >
+                {{ m.Name }}
+              </option>
+            </optgroup>
+          </template>
+          <template v-else>
+            <option v-for="m in filteredMonitorList" :key="m.Id" :value="m.Id">
+              {{ m.Name }}
+            </option>
+          </template>
         </select>
         <StatusBadge
           v-if="currentStatus"
@@ -34,7 +68,9 @@
           :monitor-name="currentMonitor?.Name ?? ''"
           :width="currentMonitor?.Width"
           :height="currentMonitor?.Height"
+          :janus-enabled="currentMonitor?.JanusEnabled === '1'"
           mode="stream"
+          show-method-badge
           class="w-full h-full"
         />
         <div v-else class="flex items-center justify-center h-full text-muted">
@@ -48,7 +84,7 @@
           <h2 class="text-sm font-medium text-heading">{{ currentMonitor.Name }}</h2>
           <div class="flex items-center gap-4 text-xs text-soft">
             <span>{{ currentMonitor.Type }}</span>
-            <span>{{ currentMonitor.Function }}</span>
+            <span>{{ friendlyFunction(currentMonitor.Function) }}</span>
             <span>{{ currentMonitor.Width }}x{{ currentMonitor.Height }}</span>
           </div>
         </div>
@@ -76,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, watch, watchEffect, onMounted, onUnmounted } from 'vue'
+import { ref, shallowRef, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import MonitorStream from '@/components/MonitorStream.vue'
@@ -97,6 +133,7 @@ const api = useApi()
 const selectedMonitorId = ref(
   typeof route.params.id === 'string' ? route.params.id : '',
 )
+const selectedGroup = ref('')
 const recentEvents = ref<ZmEvent[]>([])
 const eventsLoading = ref(false)
 const cycling = ref(false)
@@ -104,6 +141,45 @@ let cycleTimer: ReturnType<typeof setInterval> | null = null
 
 const currentMonitor = shallowRef<Monitor | null>(null)
 const currentStatus = shallowRef<MonitorStatus | null>(null)
+
+/** Monitors filtered by current group */
+const filteredMonitorList = computed(() => {
+  if (!selectedGroup.value) return monitorStore.monitorList
+  const group = monitorStore.groups.find((g) => g.Id === selectedGroup.value)
+  if (!group?.MonitorIds) return monitorStore.monitorList
+  const ids = new Set(group.MonitorIds.split(','))
+  return monitorStore.monitorList.filter((m) => ids.has(m.Id))
+})
+
+function groupMonitors(groupId: string) {
+  const group = monitorStore.groups.find((g) => g.Id === groupId)
+  if (!group?.MonitorIds) return []
+  const ids = new Set(group.MonitorIds.split(','))
+  return monitorStore.monitorList.filter((m) => ids.has(m.Id))
+}
+
+const ungroupedMonitors = computed(() => {
+  const allGroupedIds = new Set<string>()
+  for (const g of monitorStore.groups) {
+    if (g.MonitorIds) {
+      for (const id of g.MonitorIds.split(',')) allGroupedIds.add(id)
+    }
+  }
+  return monitorStore.monitorList.filter((m) => !allGroupedIds.has(m.Id))
+})
+
+const FUNCTION_LABELS: Record<string, string> = {
+  None: 'Disabled',
+  Monitor: 'Monitor',
+  Modect: 'Detect',
+  Record: 'Record',
+  Mocord: 'Record + Detect',
+  Nodect: 'Passive',
+}
+
+function friendlyFunction(func: string): string {
+  return FUNCTION_LABELS[func] ?? func
+}
 
 watchEffect(() => {
   const id = selectedMonitorId.value
@@ -150,7 +226,7 @@ function toggleCycle() {
 function startCycle() {
   cycling.value = true
   cycleTimer = setInterval(() => {
-    const monitors = monitorStore.monitorList
+    const monitors = filteredMonitorList.value
     if (monitors.length < 2) return
     const idx = monitors.findIndex((m) => m.Id === selectedMonitorId.value)
     selectedMonitorId.value = monitors[(idx + 1) % monitors.length].Id
@@ -183,6 +259,9 @@ watch(
 onMounted(async () => {
   if (!monitorsRef.value.length) {
     await monitorStore.fetchMonitors()
+  }
+  if (!monitorStore.groups.length) {
+    await monitorStore.fetchGroups()
   }
   // Route param takes priority; fall back to first monitor
   if (!selectedMonitorId.value && monitorsRef.value.length > 0) {

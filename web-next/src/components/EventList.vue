@@ -10,6 +10,7 @@
     <table v-else class="w-full text-sm">
       <thead>
         <tr class="text-left text-xs uppercase tracking-wider text-soft border-b border-divider">
+          <th v-if="selectedIds" class="pb-2 w-8" />
           <th class="pb-2 font-medium">Monitor</th>
           <th class="pb-2 font-medium">Cause</th>
           <th class="pb-2 font-medium">Start</th>
@@ -19,11 +20,20 @@
       </thead>
       <tbody>
         <tr
-          v-for="event in events"
+          v-for="(event, i) in events"
           :key="event.Id"
           class="border-b border-divider hover:bg-hover cursor-pointer transition-colors"
-          @click="$emit('select', event)"
+          :class="{ 'bg-primary-500/10': selectedId === event.Id }"
+          @click="$emit('select', event, i)"
         >
+          <td v-if="selectedIds" class="py-2 w-8" @click.stop>
+            <input
+              type="checkbox"
+              :checked="selectedIds.has(event.Id)"
+              class="accent-primary-500 h-3.5 w-3.5"
+              @change="$emit('toggle-select', event.Id)"
+            />
+          </td>
           <td class="py-2 text-body">{{ monitorName(event.MonitorId) }}</td>
           <td class="py-2 text-body">{{ event.Cause }}</td>
           <td class="py-2 text-soft">{{ formatDate(event.StartDateTime) }}</td>
@@ -66,6 +76,8 @@ withDefaults(defineProps<{
   loading?: boolean
   page?: number
   pageCount?: number
+  selectedId?: string
+  selectedIds?: Set<string>
 }>(), {
   loading: false,
   page: 1,
@@ -73,7 +85,8 @@ withDefaults(defineProps<{
 })
 
 defineEmits<{
-  select: [event: ZmEvent]
+  select: [event: ZmEvent, index: number]
+  'toggle-select': [id: string]
   page: [page: number]
 }>()
 

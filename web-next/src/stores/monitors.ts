@@ -22,6 +22,26 @@ export const useMonitorStore = defineStore('monitors', () => {
     return map
   })
 
+  /** Monitors organized by group ID. Key '' holds all monitors. */
+  const monitorsByGroup = computed(() => {
+    const map = new Map<string, MonitorWithStatus[]>()
+    map.set('', monitors.value)
+    for (const group of groups.value) {
+      if (!group.MonitorIds) continue
+      const ids = new Set(group.MonitorIds.split(','))
+      map.set(group.Id, monitors.value.filter((m) => ids.has(m.Monitor.Id)))
+    }
+    return map
+  })
+
+  /** Monitors currently in alarm state */
+  const alarmedMonitors = computed(() =>
+    monitors.value.filter((m) => {
+      const status = m.Monitor_Status?.Status?.toLowerCase()
+      return status === 'alarm' || status === 'signal'
+    }),
+  )
+
   /** Returns the per-monitor streaming port, or 0 if not configured */
   function streamingPort(monitorId: string): number {
     if (!minStreamingPort.value) return 0
@@ -89,10 +109,137 @@ export const useMonitorStore = defineStore('monitors', () => {
     }
   }
 
+  async function fetchDaemonStatus(): Promise<boolean> {
+    const auth = useAuthStore()
+    try {
+      const token = await auth.ensureValidToken()
+      const data = await apiFetch<{ result: number }>(
+        '/host/daemonCheck.json',
+        token,
+      )
+      return data.result === 1
+    } catch {
+      return false
+    }
+  }
+
+  async function fetchDiskUsage(): Promise<Record<string, { total: number; used: number; space: number }>> {
+    const auth = useAuthStore()
+    try {
+      const token = await auth.ensureValidToken()
+      const data = await apiFetch<{ usage: Record<string, { total: number; used: number; space: number }> }>(
+        '/host/getDiskPercent.json',
+        token,
+      )
+      return data.usage ?? {}
+    } catch {
+      return {}
+    }
+  }
+
+  async function fetchLoad(): Promise<string> {
+    const auth = useAuthStore()
+    try {
+      const token = await auth.ensureValidToken()
+      const data = await apiFetch<{ load: string }>(
+        '/host/getLoad.json',
+        token,
+      )
+      return data.load ?? ''
+    } catch {
+      return ''
+    }
+  }
+
+  async function updateMonitorFunction(monitorId: string, func: string): Promise<boolean> {
+    const auth = useAuthStore()
+    try {
+      const token = await auth.ensureValidToken()
+      await apiFetch(
+        `/monitors/${monitorId}.json`,
+        token,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `Monitor[Function]=${encodeURIComponent(func)}`,
+        },
+      )
+      // Update local state
+      const mws = monitorById.value.get(monitorId)
+      if (mws) mws.Monitor.Function = func as Monitor['Function']
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  async function createMonitor(data: Record<string, string>): Promise<string | null> {
+    const auth = useAuthStore()
+    try {
+      const token = await auth.ensureValidToken()
+      const body = Object.entries(data)
+        .map(([k, v]) => `Monitor[${k}]=${encodeURIComponent(v)}`)
+        .join('&')
+      const resp = await apiFetch<{ id: string }>(
+        '/monitors.json',
+        token,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+        },
+      )
+      await fetchMonitors()
+      return resp.id ?? null
+    } catch {
+      return null
+    }
+  }
+
+  async function updateMonitor(monitorId: string, data: Record<string, string>): Promise<boolean> {
+    const auth = useAuthStore()
+    try {
+      const token = await auth.ensureValidToken()
+      const body = Object.entries(data)
+        .map(([k, v]) => `Monitor[${k}]=${encodeURIComponent(v)}`)
+        .join('&')
+      await apiFetch(
+        `/monitors/${monitorId}.json`,
+        token,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+        },
+      )
+      await fetchMonitors()
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  async function deleteMonitor(monitorId: string): Promise<boolean> {
+    const auth = useAuthStore()
+    try {
+      const token = await auth.ensureValidToken()
+      await apiFetch(
+        `/monitors/${monitorId}.json`,
+        token,
+        { method: 'DELETE' },
+      )
+      monitors.value = monitors.value.filter((m) => m.Monitor.Id !== monitorId)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   function startPolling(intervalMs = 10_000) {
     stopPolling()
     fetchMonitors()
     fetchStreamingConfig()
+    fetchGroups()
     pollTimer = setInterval(fetchMonitors, intervalMs)
   }
 
@@ -108,6 +255,8 @@ export const useMonitorStore = defineStore('monitors', () => {
     groups,
     monitorList,
     monitorById,
+    monitorsByGroup,
+    alarmedMonitors,
     minStreamingPort,
     streamingPort,
     isLoading,
@@ -116,7 +265,17 @@ export const useMonitorStore = defineStore('monitors', () => {
     fetchGroups,
     fetchStreamingConfig,
     fetchMonitorStatus,
+    fetchDaemonStatus,
+    fetchDiskUsage,
+    fetchLoad,
+    updateMonitorFunction,
+    createMonitor,
+    updateMonitor,
+    deleteMonitor,
     startPolling,
     stopPolling,
   }
 })
+
+// Need import for type in updateMonitorFunction
+import type { Monitor } from '@/types/monitor'
