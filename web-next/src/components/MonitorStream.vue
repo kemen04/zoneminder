@@ -155,15 +155,40 @@ function onImgLoad() {
 }
 
 function stopAllStreams() {
-  alive.value = false
+  // Stop polling first
   stopSnapshotPolling()
 
+  // Always clear the fallback timer regardless of current method
+  if (fallbackTimer) {
+    clearTimeout(fallbackTimer)
+    fallbackTimer = null
+  }
+
+  // Kill MJPEG connection by blanking img src BEFORE setting alive=false.
+  // Setting alive=false makes imgUrl return '', which triggers Vue to
+  // remove the <img> element — by then imgEl.value would be null and
+  // the browser may keep the persistent MJPEG connection open.
   if (imgEl.value) {
     imgEl.value.src = ''
   }
 
-  if (streamMethod.value === 'go2rtc') disconnectWebRtc()
-  if (streamMethod.value === 'janus') janus.disconnect()
+  // Now mark as dead so no async init() resumes after this point
+  alive.value = false
+
+  // Disconnect WebRTC streams
+  if (streamMethod.value === 'go2rtc') {
+    const el = streamEl.value as HTMLElement & { src: string } | undefined
+    if (el) el.src = ''
+  }
+  if (streamMethod.value === 'janus') {
+    janus.disconnect()
+  }
+
+  // Clear Janus video srcObject
+  if (janusVideoEl.value) {
+    janusVideoEl.value.srcObject = null
+  }
+
   isConnected.value = false
 }
 
@@ -224,6 +249,7 @@ function disconnectWebRtc() {
 // Janus WebRTC stream setup
 async function connectJanus() {
   await nextTick()
+  if (!alive.value) return
   const videoEl = janusVideoEl.value
   if (!videoEl) {
     tryNextMethod('janus')
@@ -231,6 +257,10 @@ async function connectJanus() {
   }
 
   await janus.connect(props.monitorId, videoEl)
+  if (!alive.value) {
+    janus.disconnect()
+    return
+  }
 
   if (janus.isConnected.value) {
     isConnected.value = true
@@ -269,12 +299,16 @@ function tryNextMethod(failedMethod: string) {
 
 // Streaming hierarchy: go2rtc → Janus → MJPEG → Snapshot
 async function init() {
-  if (paused.value) return
+  if (paused.value || !alive.value) return
 
   const hasGo2rtc = await checkGo2rtc()
+  // Component may have been unmounted during the async check
+  if (!alive.value) return
+
   if (hasGo2rtc) {
     streamMethod.value = 'go2rtc'
     await nextTick()
+    if (!alive.value) return
     connectWebRtc()
     return
   }
@@ -282,6 +316,7 @@ async function init() {
   if (props.janusEnabled) {
     streamMethod.value = 'janus'
     await nextTick()
+    if (!alive.value) return
     connectJanus()
     return
   }
@@ -298,11 +333,15 @@ async function init() {
 // Pause/resume for Intersection Observer
 function pause() {
   if (paused.value) return
-  paused.value = true
+  // Blank img src BEFORE setting paused to ensure the DOM element still exists
   stopSnapshotPolling()
   if (imgEl.value) imgEl.value.src = ''
+  paused.value = true
   if (streamMethod.value === 'go2rtc') disconnectWebRtc()
-  if (streamMethod.value === 'janus') janus.disconnect()
+  if (streamMethod.value === 'janus') {
+    janus.disconnect()
+    if (janusVideoEl.value) janusVideoEl.value.srcObject = null
+  }
   isConnected.value = false
 }
 
