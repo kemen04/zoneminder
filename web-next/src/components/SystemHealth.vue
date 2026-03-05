@@ -41,7 +41,10 @@
     <div class="glass rounded-xl p-4 border border-divider">
       <div class="space-y-2">
         <div class="text-xs text-soft uppercase tracking-wider">Disk Usage</div>
-        <div v-if="Object.keys(diskUsage).length === 0" class="text-sm text-muted">
+        <div v-if="diskLoading" class="flex items-center gap-2 text-sm text-muted">
+          <span class="spinner" /> Loading...
+        </div>
+        <div v-else-if="Object.keys(diskUsage).length === 0" class="text-sm text-muted">
           No data
         </div>
         <div v-for="(info, path) in diskUsage" :key="path" class="space-y-1">
@@ -70,6 +73,7 @@ const monitorStore = useMonitorStore()
 const daemonRunning = ref(false)
 const loadDisplay = ref('...')
 const diskUsage = ref<Record<string, { total: number; used: number; space: number }>>({})
+const diskLoading = ref(true)
 
 function diskPercent(info: { total: number; used: number; space: number }): number {
   if (!info.total) return 0
@@ -82,14 +86,9 @@ function diskBarColor(percent: number): string {
   return 'bg-emerald-400'
 }
 
-onMounted(async () => {
-  const [daemon, load, disk] = await Promise.all([
-    monitorStore.fetchDaemonStatus(),
-    monitorStore.fetchLoad(),
-    monitorStore.fetchDiskUsage(),
-  ])
-  daemonRunning.value = daemon
-  loadDisplay.value = load || 'N/A'
-  diskUsage.value = disk
+onMounted(() => {
+  monitorStore.fetchDaemonStatus().then((v) => { daemonRunning.value = v })
+  monitorStore.fetchLoad().then((v) => { loadDisplay.value = v || 'N/A' })
+  monitorStore.fetchDiskUsage().then((v) => { diskUsage.value = v; diskLoading.value = false })
 })
 </script>
