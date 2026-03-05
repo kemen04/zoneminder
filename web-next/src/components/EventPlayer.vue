@@ -95,7 +95,7 @@ const playbackRate = ref(1)
 
 const videoUrl = computed(() => {
   if (!props.event || !props.event.DefaultVideo) return ''
-  return `/zm/api/events/${props.event.Id}/video.mp4?token=${auth.accessToken}`
+  return `/zm/index.php?view=view_video&eid=${props.event.Id}&token=${auth.accessToken}`
 })
 
 function onVideoLoaded() {
