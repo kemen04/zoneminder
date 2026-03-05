@@ -25,12 +25,7 @@ const router = createRouter({
       name: 'watch',
       component: () => import('@/views/WatchView.vue'),
     },
-    {
-      path: '/montage',
-      name: 'montage',
-      component: () => import('@/views/MontageView.vue'),
-    },
-    {
+{
       path: '/events',
       name: 'events',
       component: () => import('@/views/EventsView.vue'),

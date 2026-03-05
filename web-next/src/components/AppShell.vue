@@ -136,11 +136,6 @@ const CameraIcon: FunctionalComponent = () =>
     h('path', { d: 'M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z' }),
   ])
 
-const MontageIcon: FunctionalComponent = () =>
-  h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 20 20', fill: 'currentColor' }, [
-    h('path', { d: 'M2 4a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1V4zm9 0a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1h-5a1 1 0 01-1-1V4zM2 13a1 1 0 011-1h5a1 1 0 011 1v4a1 1 0 01-1 1H3a1 1 0 01-1-1v-4zm9 0a1 1 0 011-1h5a1 1 0 011 1v4a1 1 0 01-1 1h-5a1 1 0 01-1-1v-4z' }),
-  ])
-
 const EventIcon: FunctionalComponent = () =>
   h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 20 20', fill: 'currentColor' }, [
     h('path', { 'fill-rule': 'evenodd', d: 'M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z', 'clip-rule': 'evenodd' }),
@@ -170,9 +165,8 @@ const alarmCount = computed(() => monitorStore.alarmedMonitors.length)
 
 const navItems = computed(() => [
   { to: '/', label: 'Dashboard', icon: DashboardIcon },
-  { to: '/live', label: 'Live Grid', icon: GridIcon },
+  { to: '/live', label: 'Live View', icon: GridIcon },
   { to: '/watch', label: 'Watch', icon: CameraIcon },
-  { to: '/montage', label: 'Montage', icon: MontageIcon },
   { to: '/events', label: 'Events', icon: EventIcon, badge: alarmCount.value },
   { to: '/logs', label: 'Logs', icon: LogIcon },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
