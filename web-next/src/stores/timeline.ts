@@ -92,10 +92,16 @@ export const useTimelineStore = defineStore('timeline', () => {
     selectedEventId.value = eventId
   }
 
-  /** Fetch events for a single monitor within the current window */
+  /** Fetch events for a single monitor within the current window.
+   *  Uses ZM's CakePHP named-parameter URL format:
+   *  /events/index/MonitorId:X/StartDateTime >=:date/StartDateTime <=:date.json
+   */
   async function fetchEventsForMonitor(monitorId: string): Promise<void> {
     const auth = useAuthStore()
     const w = window.value
+
+    // Guard: don't fetch if window hasn't been initialized yet
+    if (w.startMs === 0 && w.endMs === 0) return
 
     // Check if we already fetched a range that covers the current window
     const cached = fetchedRanges.value.get(monitorId)
@@ -112,11 +118,17 @@ export const useTimelineStore = defineStore('timeline', () => {
       let page = 1
       let hasMore = true
 
+      // Build the CakePHP named-parameter path:
+      //   /events/index/MonitorId:X/StartDateTime >=:YYYY-MM-DD HH:MM:SS.json
+      // Spaces in field names and values must be %20-encoded in the path
+      const encVal = (s: string) => s.replace(/ /g, '%20')
+      const filterPath =
+        `MonitorId:${monitorId}` +
+        `/StartDateTime%20%3E%3D:${encVal(zmStart)}` +
+        `/StartDateTime%20%3C%3D:${encVal(zmEnd)}`
+
       while (hasMore) {
         const params = new URLSearchParams({
-          'MonitorId': monitorId,
-          'StartDateTime >=': zmStart,
-          'StartDateTime <=': zmEnd,
           sort: 'StartDateTime',
           direction: 'asc',
           limit: '200',
@@ -124,7 +136,7 @@ export const useTimelineStore = defineStore('timeline', () => {
         })
 
         const data = await apiFetch<EventsResponse>(
-          `/events.json?${params.toString()}`,
+          `/events/index/${filterPath}.json?${params.toString()}`,
           token,
         )
 

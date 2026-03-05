@@ -170,25 +170,34 @@ function debouncedRefetch() {
 }
 
 // Route param handling for /timeline/:monitorId
+// Not immediate — onMounted initializes window first, then fetches.
+// This watcher handles subsequent navigation (e.g., browser back/forward).
 watch(
   () => route.params.monitorId,
   (id) => {
     if (id && typeof id === 'string') {
       store.selectMonitor(id)
       store.fetchEventsForMonitor(id)
+    } else if (!id) {
+      store.selectMonitor(null)
     }
   },
-  { immediate: true },
 )
 
 onMounted(async () => {
-  // Initialize time window
+  // Initialize time window FIRST so fetches have valid dates
   store.initWindow()
 
   // Ensure monitors are loaded
   if (!monitorStore.monitors.length) {
     await monitorStore.fetchMonitors()
     await monitorStore.fetchGroups()
+  }
+
+  // Handle initial route param (e.g., /timeline/5)
+  const id = route.params.monitorId
+  if (id && typeof id === 'string') {
+    store.selectMonitor(id)
   }
 
   // Fetch events for visible monitors
